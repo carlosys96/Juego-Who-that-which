@@ -2,27 +2,27 @@
   "placeholderImages": [
     {
       "id": "avatar1",
-      "description": "A playful monster avatar.",
-      "imageUrl": "https://picsum.photos/seed/avatar1/200/200",
-      "imageHint": "monster avatar"
+      "description": "Un divertido personaje de dibujos animados con gafas.",
+      "imageUrl": "https://picsum.photos/seed/cartoon1/200/200",
+      "imageHint": "cartoon character"
     },
     {
       "id": "avatar2",
-      "description": "A cool robot avatar.",
-      "imageUrl": "https://picsum.photos/seed/avatar2/200/200",
-      "imageHint": "robot avatar"
+      "description": "Un astuto zorro de dibujos animados.",
+      "imageUrl": "https://picsum.photos/seed/cartoon2/200/200",
+      "imageHint": "cartoon fox"
     },
     {
       "id": "avatar3",
-      "description": "A friendly alien avatar.",
-      "imageUrl": "https://picsum.photos/seed/avatar3/200/200",
-      "imageHint": "alien avatar"
+      "description": "Un valiente león de dibujos animados.",
+      "imageUrl": "https://picsum.photos/seed/cartoon3/200/200",
+      "imageHint": "cartoon lion"
     },
     {
       "id": "avatar4",
-      "description": "A superhero avatar.",
-      "imageUrl": "https://picsum.photos/seed/avatar4/200/200",
-      "imageHint": "superhero avatar"
+      "description": "Un robot amigable de dibujos animados.",
+      "imageUrl": "https://picsum.photos/seed/cartoon4/200/200",
+      "imageHint": "cartoon robot"
     }
   ]
 }
