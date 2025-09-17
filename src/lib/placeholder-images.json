@@ -2,27 +2,27 @@
   "placeholderImages": [
     {
       "id": "avatar1",
-      "description": "Un divertido personaje de dibujos animados con gafas.",
-      "imageUrl": "https://picsum.photos/seed/cartoon1/200/200",
-      "imageHint": "cartoon character"
+      "description": "Un fantasma amigable de dibujos animados.",
+      "imageUrl": "https://picsum.photos/seed/ghost/200/200",
+      "imageHint": "cartoon ghost"
     },
     {
       "id": "avatar2",
-      "description": "Un astuto zorro de dibujos animados.",
-      "imageUrl": "https://picsum.photos/seed/cartoon2/200/200",
-      "imageHint": "cartoon fox"
+      "description": "Un oso superhéroe de dibujos animados.",
+      "imageUrl": "https://picsum.photos/seed/superhero/200/200",
+      "imageHint": "superhero bear"
     },
     {
       "id": "avatar3",
-      "description": "Un valiente león de dibujos animados.",
-      "imageUrl": "https://picsum.photos/seed/cartoon3/200/200",
-      "imageHint": "cartoon lion"
+      "description": "Un unicornio mágico de dibujos animados.",
+      "imageUrl": "https://picsum.photos/seed/unicorn/200/200",
+      "imageHint": "magical unicorn"
     },
     {
       "id": "avatar4",
-      "description": "Un robot amigable de dibujos animados.",
-      "imageUrl": "https://picsum.photos/seed/cartoon4/200/200",
-      "imageHint": "cartoon robot"
+      "description": "Un gato pirata de dibujos animados.",
+      "imageUrl": "https://picsum.photos/seed/pirate/200/200",
+      "imageHint": "pirate cat"
     }
   ]
 }
