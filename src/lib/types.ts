@@ -1,4 +1,5 @@
 export type QuestionType = 'multiple-choice' | 'fill-in-the-blank' | 'true-false' | 'timed-choice';
+export type GameDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface AppQuestion {
   id: string;
@@ -7,7 +8,7 @@ export interface AppQuestion {
   text: string;
   options: string[];
   correctAnswer: string;
-  difficulty: 'easy' | 'medium' | 'hard';
+  difficulty: GameDifficulty;
 }
 
 export interface PlayerScore {
@@ -15,6 +16,12 @@ export interface PlayerScore {
   avatar: string;
   score: number;
   date: string;
+}
+
+export interface PlayerInfo {
+    name: string;
+    avatar: string;
+    difficulty: GameDifficulty;
 }
 
 export interface PlayerPerformance {

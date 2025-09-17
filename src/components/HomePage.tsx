@@ -26,21 +26,23 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import useLocalStorage from '@/hooks/use-local-storage';
-import type { PlayerScore } from '@/lib/types';
+import type { PlayerScore, GameDifficulty } from '@/lib/types';
 import { RelatixLogo } from './icons';
 import { cn } from '@/lib/utils';
 import { Trophy } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 export default function HomePage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(PlaceHolderImages[0].imageUrl);
+  const [difficulty, setDifficulty] = useState<GameDifficulty>('easy');
   const [highScores] = useLocalStorage<PlayerScore[]>('relatix-highscores', []);
   const [, setPlayerInfo] = useLocalStorage('relatix-player', null);
 
   const handleStartGame = () => {
     if (name.trim()) {
-      setPlayerInfo({ name: name.trim(), avatar: selectedAvatar });
+      setPlayerInfo({ name: name.trim(), avatar: selectedAvatar, difficulty });
       router.push('/play');
     }
   };
@@ -78,6 +80,49 @@ export default function HomePage() {
                     onKeyDown={(e) => e.key === 'Enter' && handleStartGame()}
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Choose Difficulty</Label>
+                  <RadioGroup
+                    defaultValue="easy"
+                    className="grid grid-cols-3 gap-4"
+                    onValueChange={(value: GameDifficulty) => setDifficulty(value)}
+                    value={difficulty}
+                  >
+                    <div>
+                      <RadioGroupItem value="easy" id="easy" className="peer sr-only" />
+                      <Label
+                        htmlFor="easy"
+                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                      >
+                        Fácil
+                      </Label>
+                    </div>
+                    <div>
+                      <RadioGroupItem
+                        value="medium"
+                        id="medium"
+                        className="peer sr-only"
+                      />
+                      <Label
+                        htmlFor="medium"
+                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                      >
+                        Intermedio
+                      </Label>
+                    </div>
+                    <div>
+                      <RadioGroupItem value="hard" id="hard" className="peer sr-only" />
+                      <Label
+                        htmlFor="hard"
+                        className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                      >
+                        Difícil
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                
                 <div className="space-y-2">
                   <Label>Choose Your Avatar</Label>
                   <div className="flex flex-wrap gap-4">

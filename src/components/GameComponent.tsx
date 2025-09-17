@@ -16,7 +16,7 @@ import { questions as allQuestions } from '@/lib/questions';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds';
 import { adaptQuestionsToUserPerformance } from '@/ai/flows/adapt-questions-to-user-performance.flow';
-import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerSession } from '@/lib/types';
+import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerSession, PlayerInfo, GameDifficulty } from '@/lib/types';
 import {
   Award,
   CheckCircle2,
@@ -36,14 +36,20 @@ import { RelatixLogo } from './icons';
 const QUESTIONS_PER_LEVEL = 5;
 const TIMED_QUESTION_DURATION = 10; // seconds
 
+const difficultyToLevels: Record<GameDifficulty, number[]> = {
+  easy: [1],
+  medium: [2],
+  hard: [3],
+};
+
 export default function GameComponent() {
   const router = useRouter();
-  const [playerInfo] = useLocalStorage('relatix-player', { name: 'Player', avatar: '' });
+  const [playerInfo] = useLocalStorage<PlayerInfo>('relatix-player', { name: 'Player', avatar: '', difficulty: 'easy' });
   const [highScores, setHighScores] = useLocalStorage<PlayerScore[]>('relatix-highscores', []);
   const [playerSessions, setPlayerSessions] = useLocalStorage<PlayerSession[]>('relatix-sessions', []);
 
   const [gameState, setGameState] = useState<GameState>('idle');
-  const [currentLevel, setCurrentLevel] = useState(1);
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [questionQueue, setQuestionQueue] = useState<AppQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -52,9 +58,12 @@ export default function GameComponent() {
   const [isMusicOn, setIsMusicOn] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [timer, setTimer] = useState(TIMED_QUESTION_DURATION);
+  
+  const gameLevels = useMemo(() => difficultyToLevels[playerInfo.difficulty] || [1, 2, 3], [playerInfo.difficulty]);
+  const currentLevel = useMemo(() => gameLevels[currentLevelIndex], [gameLevels, currentLevelIndex]);
 
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
-
+  
   const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
 
@@ -75,14 +84,14 @@ export default function GameComponent() {
       if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
         setQuestionIndex(i => i + 1);
       } else {
-        if (currentLevel < 3) {
+        if (currentLevelIndex < gameLevels.length - 1) {
           setGameState('level-transition');
         } else {
           setGameState('finished');
         }
       }
     }, 1500);
-  }, [currentQuestion, currentLevel, feedback, questionIndex]);
+  }, [currentQuestion, currentLevel, feedback, questionIndex, currentLevelIndex, gameLevels.length]);
 
   const startLevel = useCallback(async (level: number) => {
     setGameState('idle');
@@ -117,9 +126,8 @@ export default function GameComponent() {
       router.push('/');
       return;
     }
-    startLevel(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    startLevel(currentLevel);
+  }, [playerInfo, router, startLevel, currentLevel]);
 
   useEffect(() => {
     if (gameState === 'playing' && currentQuestion?.type === 'timed-choice') {
@@ -140,9 +148,9 @@ export default function GameComponent() {
 
 
   const handleNextLevel = () => {
-    const nextLevel = currentLevel + 1;
-    setCurrentLevel(nextLevel);
-    startLevel(nextLevel);
+    const nextLevelIndex = currentLevelIndex + 1;
+    setCurrentLevelIndex(nextLevelIndex);
+    startLevel(gameLevels[nextLevelIndex]);
   };
   
   const handleFinishGame = () => {
@@ -181,7 +189,9 @@ export default function GameComponent() {
           <Card className={cn("w-full max-w-2xl transition-all duration-500", feedback && (feedback === 'correct' ? 'border-accent shadow-accent/20' : 'border-destructive shadow-destructive/20'))}>
             <CardHeader>
               <div className="flex justify-between items-center mb-2">
-                <CardTitle className="font-headline text-2xl">Level {currentLevel}</CardTitle>
+                <CardTitle className="font-headline text-2xl">
+                  {gameLevels.length > 1 ? `Level ${currentLevel}` : `Difficulty: ${playerInfo.difficulty}`}
+                </CardTitle>
                 <div className="flex items-center gap-2 font-mono text-lg font-bold text-primary">
                   <Star className="w-5 h-5 fill-primary" /> {score}
                 </div>
@@ -249,7 +259,7 @@ export default function GameComponent() {
                 </div>
               <p className="text-lg">Your score: <span className="font-bold text-primary">{score}</span></p>
               <Button onClick={handleNextLevel} className="w-full">
-                Start Level {currentLevel + 1} <ChevronRight className="ml-2 h-4 w-4"/>
+                Start Level {gameLevels[currentLevelIndex + 1]} <ChevronRight className="ml-2 h-4 w-4"/>
               </Button>
             </CardContent>
           </Card>
