@@ -102,11 +102,11 @@ export const questions: AppQuestion[] = [
     difficulty: 'easy',
     explanation: 'Use "who" for people.',
   },
-  // Level 2: Intermediate, Fill-in-the-blank
+  // Level 2: Intermediate, Fill-in-the-blank with options
   {
     id: '6',
     level: 2,
-    type: 'fill-in-the-blank',
+    type: 'multiple-choice',
     text: 'She is the artist ___ paintings are famous worldwide.',
     options: ['who', 'whose', 'which'],
     correctAnswer: 'whose',
@@ -116,7 +116,7 @@ export const questions: AppQuestion[] = [
   {
     id: '7',
     level: 2,
-    type: 'fill-in-the-blank',
+    type: 'multiple-choice',
     text: 'I visited the town ___ my father was born.',
     options: ['that', 'where', 'who'],
     correctAnswer: 'where',
@@ -136,7 +136,7 @@ export const questions: AppQuestion[] = [
   {
     id: '9',
     level: 2,
-    type: 'fill-in-the-blank',
+    type: 'multiple-choice',
     text: 'The reason ___ I am late is because of traffic.',
     options: ['why', 'which', 'who'],
     correctAnswer: 'why',
@@ -146,7 +146,7 @@ export const questions: AppQuestion[] = [
   {
     id: '10',
     level: 2,
-    type: 'fill-in-the-blank',
+    type: 'multiple-choice',
     text: 'He finally met the celebrity ___ he had always admired.',
     options: ['which', 'that', 'whom'],
     correctAnswer: 'whom',
@@ -156,7 +156,7 @@ export const questions: AppQuestion[] = [
   {
     id: '21',
     level: 2,
-    type: 'fill-in-the-blank',
+    type: 'multiple-choice',
     text: 'I remember the day ___ we first met.',
     options: ['when', 'where', 'which'],
     correctAnswer: 'when',
@@ -176,7 +176,7 @@ export const questions: AppQuestion[] = [
   {
     id: '23',
     level: 2,
-    type: 'fill-in-the-blank',
+    type: 'multiple-choice',
     text: 'The book, ___ is on the table, is mine.',
     options: ['that', 'which', 'who'],
     correctAnswer: 'which',
@@ -186,7 +186,7 @@ export const questions: AppQuestion[] = [
   {
     id: '24',
     level: 2,
-    type: 'fill-in-the-blank',
+    type: 'multiple-choice',
     text: 'Do you know the reason ___ the sky is blue?',
     options: ['why', 'that', 'how'],
     correctAnswer: 'why',
@@ -196,20 +196,20 @@ export const questions: AppQuestion[] = [
   {
     id: '25',
     level: 2,
-    type: 'fill-in-the-blank',
+    type: 'multiple-choice',
     text: 'The people to ___ she was speaking did not understand her.',
     options: ['who', 'whom', 'that'],
     correctAnswer: 'whom',
     difficulty: 'medium',
     explanation: 'Use "whom" as the object of a preposition ("to whom").',
   },
-  // Level 3: Advanced, Timed
+  // Level 3: Advanced, Sentence Completion (timed)
   {
     id: '11',
     level: 3,
-    type: 'timed-choice',
+    type: 'sentence-completion',
     text: 'The project, ___ was completed ahead of schedule, received high praise.',
-    options: ['which', 'that', 'who'],
+    options: [],
     correctAnswer: 'which',
     difficulty: 'hard',
     explanation: 'Use "which" in a non-defining clause (set off by commas) to give extra information about a thing.',
@@ -217,9 +217,9 @@ export const questions: AppQuestion[] = [
   {
     id: '12',
     level: 3,
-    type: 'timed-choice',
+    type: 'sentence-completion',
     text: 'This is the only one of his books ___ is worth reading.',
-    options: ['which', 'that', 'who'],
+    options: [],
     correctAnswer: 'that',
     difficulty: 'hard',
     explanation: 'Use "that" after superlatives like "the only one".',
@@ -237,9 +237,9 @@ export const questions: AppQuestion[] = [
   {
     id: '14',
     level: 3,
-    type: 'timed-choice',
+    type: 'sentence-completion',
     text: "I talked to the person ___ car was blocking the driveway.",
-    options: ['who', 'whose', 'which'],
+    options: [],
     correctAnswer: 'whose',
     difficulty: 'hard',
     explanation: 'Use "whose" to show possession (the car belongs to the person).',
@@ -247,9 +247,9 @@ export const questions: AppQuestion[] = [
   {
     id: '15',
     level: 3,
-    type: 'timed-choice',
+    type: 'sentence-completion',
     text: 'The decisions ___ the committee makes are final.',
-    options: ['who', 'which', 'that'],
+    options: [],
     correctAnswer: 'that',
     difficulty: 'hard',
     explanation: 'Use "that" or "which" for things in a defining clause. "That" is very common.',
@@ -257,9 +257,9 @@ export const questions: AppQuestion[] = [
   {
     id: '26',
     level: 3,
-    type: 'timed-choice',
+    type: 'sentence-completion',
     text: 'This is a matter ___ does not concern you.',
-    options: ['that', 'who', 'whom'],
+    options: [],
     correctAnswer: 'that',
     difficulty: 'hard',
     explanation: 'Use "that" or "which" to introduce a defining clause for a thing ("matter").',
@@ -267,10 +267,10 @@ export const questions: AppQuestion[] = [
   {
     id: '27',
     level: 3,
-    type: 'timed-choice',
-    text: 'The manager, ___ I complained, was very helpful.',
-    options: ['to whom', 'who', 'to who'],
-    correctAnswer: 'to whom',
+    type: 'sentence-completion',
+    text: 'The manager, to ___ I complained, was very helpful.',
+    options: [],
+    correctAnswer: 'whom',
     difficulty: 'hard',
     explanation: 'In formal English, when a preposition precedes the relative pronoun, "whom" must be used for people.',
   },
@@ -287,9 +287,9 @@ export const questions: AppQuestion[] = [
   {
     id: '29',
     level: 3,
-    type: 'timed-choice',
+    type: 'sentence-completion',
     text: 'He is an author ___ work I greatly admire.',
-    options: ['which', 'that', 'whose'],
+    options: [],
     correctAnswer: 'whose',
     difficulty: 'hard',
     explanation: 'Use "whose" to show possession, even for things, in formal contexts.',
@@ -297,13 +297,11 @@ export const questions: AppQuestion[] = [
   {
     id: '30',
     level: 3,
-    type: 'timed-choice',
+    type: 'sentence-completion',
     text: 'There were several people present, none of ___ I knew.',
-    options: ['which', 'whom', 'who'],
+    options: [],
     correctAnswer: 'whom',
     difficulty: 'hard',
     explanation: 'Use "whom" as the object of a preposition ("of whom").',
   },
 ];
-
-    

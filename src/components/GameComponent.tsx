@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import { questions as allQuestions } from '@/lib/questions';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds';
@@ -43,7 +43,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
 
 const QUESTIONS_PER_LEVEL = 10;
-const TIMED_QUESTION_DURATION = 10; // seconds
+const TIMED_QUESTION_DURATION = 15; // seconds
 
 export default function GameComponent() {
   const router = useRouter();
@@ -62,6 +62,7 @@ export default function GameComponent() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [timer, setTimer] = useState(TIMED_QUESTION_DURATION);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState('');
 
   const gameLevels = useMemo(() => {
     const difficultyMap: Record<GameDifficulty, number[]> = {
@@ -80,6 +81,7 @@ export default function GameComponent() {
   const handleContinue = () => {
     setFeedback(null);
     setSelectedAnswer(null);
+    setInputValue('');
 
     const nextQuestionIndex = questionIndex + 1;
     if (nextQuestionIndex < questionQueue.length) {
@@ -96,8 +98,9 @@ export default function GameComponent() {
   const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
 
+    const processedAnswer = answer.trim().toLowerCase();
     setSelectedAnswer(answer);
-    const isCorrect = answer === currentQuestion.correctAnswer;
+    const isCorrect = processedAnswer === currentQuestion.correctAnswer.toLowerCase();
     
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     if (isCorrect) {
@@ -112,7 +115,8 @@ export default function GameComponent() {
   }, [currentQuestion, feedback]);
   
   useEffect(() => {
-    if (gameState === 'playing' && currentQuestion?.type === 'timed-choice' && !feedback) {
+    const isTimed = currentQuestion?.type === 'timed-choice' || currentQuestion?.type === 'sentence-completion';
+    if (gameState === 'playing' && isTimed && !feedback) {
       setTimer(TIMED_QUESTION_DURATION);
       const interval = setInterval(() => {
         setTimer(prev => {
@@ -185,6 +189,11 @@ export default function GameComponent() {
     setIsMusicOn(newMusicState);
     toggleMusic(newMusicState);
   };
+  
+  const handleSentenceCompletionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleAnswer(inputValue);
+  };
 
   if (!playerInfo?.name) {
     return null;
@@ -194,6 +203,7 @@ export default function GameComponent() {
     if (!feedback || !currentQuestion) return null;
 
     const isCorrect = feedback === 'correct';
+    const answerToShow = selectedAnswer === 'timeout' ? 'No answer' : selectedAnswer;
 
     return (
       <AlertDialog open={!!feedback} onOpenChange={(open) => !open && handleContinue()}>
@@ -210,7 +220,7 @@ export default function GameComponent() {
             <AlertDialogDescription className="space-y-4 pt-4 text-left">
                <div className="text-foreground p-3 bg-muted rounded-md">
                  <p className="font-semibold mb-2">Your question was:</p>
-                 <p>{currentQuestion.text.replace('___', `"${selectedAnswer}"`)}</p>
+                 <p>{currentQuestion.text.replace('___', `"${answerToShow}"`)}</p>
                </div>
               {!isCorrect && (
                 <div>
@@ -247,11 +257,10 @@ export default function GameComponent() {
     
     switch (gameState) {
       case 'playing':
+        const isTimed = currentQuestion?.type === 'timed-choice' || currentQuestion?.type === 'sentence-completion';
         return (
           <Card className={cn(
-            "w-full max-w-2xl transition-all duration-300",
-            feedback === 'correct' && 'border-green-500',
-            feedback === 'incorrect' && 'border-destructive'
+            "w-full max-w-2xl transition-all duration-300"
           )}>
             <CardHeader>
               <div className="flex justify-between items-center mb-4">
@@ -265,7 +274,7 @@ export default function GameComponent() {
             </CardHeader>
             {currentQuestion ? (
               <CardContent className="flex flex-col items-center text-center">
-                {currentQuestion.type === 'timed-choice' && !feedback && (
+                {isTimed && !feedback && (
                   <div className="w-full mb-4">
                     <div className="relative h-2 bg-secondary rounded-full overflow-hidden">
                        <div className="absolute top-0 left-0 h-full bg-destructive animate-progress-bar" style={{ animationDuration: `${TIMED_QUESTION_DURATION}s`}}></div>
@@ -278,23 +287,37 @@ export default function GameComponent() {
                     <span key={i}>{part}{i < currentQuestion.text.split('___').length - 1 && <span className="inline-block w-24 border-b-2 border-dashed mx-2"></span>}</span>
                   ))}
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                  {currentQuestion.options.map(option => (
-                    <Button
-                      key={option}
-                      variant="outline"
-                      size="lg"
-                      className={cn(
-                        "h-auto py-4 text-base transition-colors duration-300",
-                        selectedAnswer === option && (feedback === 'correct' ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500' : 'bg-destructive/20 text-destructive-foreground border-destructive')
-                      )}
-                      onClick={() => handleAnswer(option)}
+                {currentQuestion.type === 'sentence-completion' ? (
+                  <form onSubmit={handleSentenceCompletionSubmit} className="w-full max-w-sm flex gap-2">
+                    <Input 
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      placeholder="Type your answer"
                       disabled={!!feedback}
-                    >
-                      {option}
-                    </Button>
-                  ))}
-                </div>
+                      autoFocus
+                    />
+                    <Button type="submit" disabled={!!feedback}>Submit</Button>
+                  </form>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                    {currentQuestion.options.map(option => (
+                      <Button
+                        key={option}
+                        variant="outline"
+                        size="lg"
+                        className={cn(
+                          "h-auto py-4 text-base transition-colors duration-300",
+                          selectedAnswer === option && (feedback === 'correct' ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500' : 'bg-destructive/20 text-destructive-foreground border-destructive')
+                        )}
+                        onClick={() => handleAnswer(option)}
+                        disabled={!!feedback}
+                      >
+                        {option}
+                      </Button>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             ) : <p>Loading questions...</p>}
           </Card>

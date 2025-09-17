@@ -1,4 +1,4 @@
-export type QuestionType = 'multiple-choice' | 'fill-in-the-blank' | 'true-false' | 'timed-choice';
+export type QuestionType = 'multiple-choice' | 'fill-in-the-blank' | 'true-false' | 'timed-choice' | 'sentence-completion';
 export type GameDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface AppQuestion {
