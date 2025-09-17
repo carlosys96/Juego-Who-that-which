@@ -109,7 +109,7 @@ export default function GameComponent() {
   const handleContinue = () => {
     setFeedback(null);
     setSelectedAnswer(null);
-    if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
+    if (questionIndex < questionQueue.length - 1) {
       setQuestionIndex(i => i + 1);
     } else {
       if (currentLevelIndex < gameLevels.length - 1) {
