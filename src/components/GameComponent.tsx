@@ -25,7 +25,7 @@ import { questions as allQuestions } from '@/lib/questions';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds';
 import { adaptQuestionsToUserPerformance } from '@/ai/flows/adapt-questions-to-user-performance.flow';
-import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerInfo, GameDifficulty } from '@/lib/types';
+import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerInfo, GameDifficulty, PlayerSession } from '@/lib/types';
 import {
   Award,
   CheckCircle2,
@@ -102,7 +102,7 @@ export default function GameComponent() {
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     if (isCorrect) {
       playCorrectSound();
-      setScore(s => s + 10 * currentQuestion.level);
+      setScore(s => s + 10 * (currentQuestion.level || 1));
     } else {
       playIncorrectSound();
     }
@@ -163,7 +163,8 @@ export default function GameComponent() {
       return;
     }
     startLevel();
-  }, [playerInfo, router, startLevel]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerInfo?.name, router]);
 
   const handleNextLevel = () => {
     setCurrentLevelIndex(prev => prev + 1);
@@ -174,7 +175,7 @@ export default function GameComponent() {
     const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date: new Date().toISOString() };
     const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
-    setHighScores([...highScores, finalScore]);
+    setHighScores([...highScores, finalScore].sort((a, b) => b.score - a.score).slice(0, 10));
     setPlayerSessions([...playerSessions, sessionData]);
     router.push('/');
   };
@@ -195,12 +196,12 @@ export default function GameComponent() {
     const isCorrect = feedback === 'correct';
 
     return (
-      <AlertDialog open={!!feedback}>
+      <AlertDialog open={!!feedback} onOpenChange={(open) => !open && handleContinue()}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               {isCorrect ? (
-                <CheckCircle2 className="h-6 w-6 text-accent" />
+                <CheckCircle2 className="h-6 w-6 text-green-500" />
               ) : (
                 <XCircle className="h-6 w-6 text-destructive" />
               )}
@@ -249,17 +250,18 @@ export default function GameComponent() {
         return (
           <Card className={cn(
             "w-full max-w-2xl transition-all duration-300",
+            feedback === 'correct' && 'border-green-500',
+            feedback === 'incorrect' && 'border-destructive'
           )}>
             <CardHeader>
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-4">
                 <CardTitle className="font-headline text-2xl">
-                  {`Difficulty: ${playerInfo.difficulty}`}
+                  {`Question: ${questionIndex + 1}/${QUESTIONS_PER_LEVEL}`}
                 </CardTitle>
                 <div className="flex items-center gap-2 font-mono text-lg font-bold text-primary">
                   <Star className="w-5 h-5 fill-primary" /> {score}
                 </div>
               </div>
-              <Progress value={questionQueue.length > 0 ? (questionIndex / questionQueue.length) * 100 : 0} className="w-full" />
             </CardHeader>
             {currentQuestion ? (
               <CardContent className="flex flex-col items-center text-center">
@@ -284,7 +286,7 @@ export default function GameComponent() {
                       size="lg"
                       className={cn(
                         "h-auto py-4 text-base transition-colors duration-300",
-                        selectedAnswer === option && (feedback === 'correct' ? 'bg-accent text-accent-foreground border-accent' : 'bg-destructive/20 text-destructive-foreground border-destructive')
+                        selectedAnswer === option && (feedback === 'correct' ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500' : 'bg-destructive/20 text-destructive-foreground border-destructive')
                       )}
                       onClick={() => handleAnswer(option)}
                       disabled={!!feedback}
@@ -322,7 +324,7 @@ export default function GameComponent() {
             <CardHeader>
               <CardTitle className="font-headline text-3xl">Challenge Complete!</CardTitle>
               {isNewHighScore && (
-                <div className="flex items-center justify-center gap-2 text-accent font-semibold">
+                <div className="flex items-center justify-center gap-2 text-yellow-500 font-semibold">
                   <Trophy className="w-6 h-6"/> New High Score!
                 </div>
               )}
@@ -376,7 +378,3 @@ export default function GameComponent() {
     </div>
   );
 }
-
-    
-
-    
