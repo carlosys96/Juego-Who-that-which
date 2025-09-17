@@ -259,7 +259,7 @@ export default function GameComponent() {
                   <Star className="w-5 h-5 fill-primary" /> {score}
                 </div>
               </div>
-              <Progress value={((questionIndex + 1) / QUESTIONS_PER_LEVEL) * 100} className="w-full" />
+              <Progress value={questionQueue.length > 0 ? ((questionIndex + 1) / questionQueue.length) * 100 : 0} className="w-full" />
             </CardHeader>
             {currentQuestion ? (
               <CardContent className="flex flex-col items-center text-center">
