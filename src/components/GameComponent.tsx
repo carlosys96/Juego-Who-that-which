@@ -10,6 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { questions as allQuestions } from '@/lib/questions';
@@ -71,6 +80,22 @@ export default function GameComponent() {
 
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
 
+  const handleContinue = () => {
+    setFeedback(null);
+    setSelectedAnswer(null);
+
+    const nextQuestionIndex = questionIndex + 1;
+    if (nextQuestionIndex < questionQueue.length) {
+      setQuestionIndex(nextQuestionIndex);
+    } else {
+      if (currentLevelIndex < gameLevels.length - 1) {
+        setGameState('level-transition');
+      } else {
+        setGameState('finished');
+      }
+    }
+  };
+
   const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
 
@@ -106,22 +131,6 @@ export default function GameComponent() {
     }
   }, [gameState, currentQuestion, feedback, handleAnswer]);
 
-  const handleContinue = () => {
-    setFeedback(null);
-    setSelectedAnswer(null);
-
-    const nextQuestionIndex = questionIndex + 1;
-    if (nextQuestionIndex < questionQueue.length) {
-      setQuestionIndex(nextQuestionIndex);
-    } else {
-      if (currentLevelIndex < gameLevels.length - 1) {
-        setGameState('level-transition');
-      } else {
-        setGameState('finished');
-      }
-    }
-  };
-  
   const startLevel = useCallback(async () => {
     setGameState('idle');
     setIsAiLoading(true);
@@ -159,13 +168,8 @@ export default function GameComponent() {
   }, [playerInfo, router, startLevel]);
 
   const handleNextLevel = () => {
-    const nextLevelIndex = currentLevelIndex + 1;
-    if (nextLevelIndex < gameLevels.length) {
-      setCurrentLevelIndex(nextLevelIndex);
-      startLevel();
-    } else {
-      setGameState('finished');
-    }
+    setCurrentLevelIndex(prev => prev + 1);
+    startLevel();
   };
   
   const handleFinishGame = () => {
@@ -186,6 +190,39 @@ export default function GameComponent() {
   if (!playerInfo?.name) {
     return null;
   }
+  
+  const renderFeedbackDialog = () => {
+    if (!feedback) return null;
+
+    const isCorrect = feedback === 'correct';
+
+    return (
+      <AlertDialog open={!!feedback}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {isCorrect ? (
+                <CheckCircle2 className="h-6 w-6 text-accent" />
+              ) : (
+                <XCircle className="h-6 w-6 text-destructive" />
+              )}
+              {isCorrect ? 'Excellent!' : 'Incorrect'}
+            </AlertDialogTitle>
+            {!isCorrect && (
+              <AlertDialogDescription>
+                The correct answer is: "{currentQuestion.correctAnswer}"
+              </AlertDialogDescription>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleContinue}>
+              Continue <ChevronRight className="ml-2 h-4 w-4" />
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  };
 
   const renderContent = () => {
     if (isAiLoading) {
@@ -201,7 +238,7 @@ export default function GameComponent() {
     switch (gameState) {
       case 'playing':
         return (
-          <Card className={cn("w-full max-w-2xl transition-all duration-300", feedback && (feedback === 'correct' ? 'border-accent shadow-lg shadow-accent/20' : 'border-destructive shadow-lg shadow-destructive/20'))}>
+          <Card className="w-full max-w-2xl transition-all duration-300">
             <CardHeader>
               <div className="flex justify-between items-center mb-2">
                 <CardTitle className="font-headline text-2xl">
@@ -234,12 +271,7 @@ export default function GameComponent() {
                       key={option}
                       variant="outline"
                       size="lg"
-                      className={cn("h-auto py-4 text-base transition-colors duration-300", {
-                        "bg-accent text-accent-foreground hover:bg-accent": feedback === 'correct' && option === currentQuestion.correctAnswer,
-                        "bg-destructive text-destructive-foreground hover:bg-destructive": feedback === 'incorrect' && selectedAnswer === option,
-                        "border-accent": feedback === 'correct' && option === currentQuestion.correctAnswer,
-                        "border-destructive": feedback === 'incorrect' && selectedAnswer === option,
-                      })}
+                      className="h-auto py-4 text-base"
                       onClick={() => handleAnswer(option)}
                       disabled={!!feedback}
                     >
@@ -247,23 +279,6 @@ export default function GameComponent() {
                     </Button>
                   ))}
                 </div>
-                {feedback && (
-                  <div className="mt-6 flex flex-col items-center gap-4 w-full animate-in fade-in duration-500">
-                    <div className="flex items-center gap-2">
-                      {feedback === 'correct' ? (
-                         <CheckCircle2 className="h-6 w-6 text-accent" />
-                      ) : (
-                         <XCircle className="h-6 w-6 text-destructive" />
-                      )}
-                      <p className={cn("text-lg font-semibold", feedback === 'correct' ? 'text-accent' : 'text-destructive')}>
-                         {feedback === 'correct' ? "Excellent!" : `The correct answer is: ${currentQuestion.correctAnswer}`}
-                      </p>
-                    </div>
-                    <Button onClick={handleContinue} className="w-full sm:w-auto">
-                      Continue <ChevronRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
               </CardContent>
             ) : <p>Loading questions...</p>}
           </Card>
@@ -343,6 +358,9 @@ export default function GameComponent() {
           </div>
        </header>
       {renderContent()}
+      {renderFeedbackDialog()}
     </div>
   );
 }
+
+    
