@@ -63,6 +63,19 @@ export default function GameComponent() {
   const currentLevel = useMemo(() => gameLevels[currentLevelIndex], [gameLevels, currentLevelIndex]);
 
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
+
+  const handleContinue = () => {
+    setFeedback(null);
+    if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
+      setQuestionIndex(i => i + 1);
+    } else {
+      if (currentLevelIndex < gameLevels.length - 1) {
+        setGameState('level-transition');
+      } else {
+        setGameState('finished');
+      }
+    }
+  };
   
   const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
@@ -79,19 +92,7 @@ export default function GameComponent() {
 
     setUserPerformance(prev => [...prev, { questionId: currentQuestion.id, correct: isCorrect, chosenAnswer: answer }]);
 
-    setTimeout(() => {
-      setFeedback(null);
-      if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
-        setQuestionIndex(i => i + 1);
-      } else {
-        if (currentLevelIndex < gameLevels.length - 1) {
-          setGameState('level-transition');
-        } else {
-          setGameState('finished');
-        }
-      }
-    }, 1500);
-  }, [currentQuestion, currentLevel, feedback, questionIndex, currentLevelIndex, gameLevels.length]);
+  }, [currentQuestion, currentLevel, feedback]);
 
   const startLevel = useCallback(async (level: number) => {
     setGameState('idle');
@@ -130,7 +131,7 @@ export default function GameComponent() {
   }, [playerInfo, router, startLevel, currentLevel]);
 
   useEffect(() => {
-    if (gameState === 'playing' && currentQuestion?.type === 'timed-choice') {
+    if (gameState === 'playing' && currentQuestion?.type === 'timed-choice' && !feedback) {
       setTimer(TIMED_QUESTION_DURATION);
       const interval = setInterval(() => {
         setTimer(prev => {
@@ -144,7 +145,7 @@ export default function GameComponent() {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [gameState, currentQuestion, handleAnswer]);
+  }, [gameState, currentQuestion, handleAnswer, feedback]);
 
 
   const handleNextLevel = () => {
@@ -231,15 +232,20 @@ export default function GameComponent() {
                   ))}
                 </div>
                 {feedback && (
-                  <div className="mt-6 flex items-center gap-2">
-                    {feedback === 'correct' ? (
-                       <CheckCircle2 className="h-6 w-6 text-accent" />
-                    ) : (
-                       <XCircle className="h-6 w-6 text-destructive" />
-                    )}
-                    <p className={cn("text-lg font-semibold", feedback === 'correct' ? 'text-accent' : 'text-destructive')}>
-                       {feedback === 'correct' ? "Excellent!" : `The correct answer is: ${currentQuestion.correctAnswer}`}
-                    </p>
+                  <div className="mt-6 flex flex-col items-center gap-4 w-full">
+                    <div className="flex items-center gap-2">
+                      {feedback === 'correct' ? (
+                         <CheckCircle2 className="h-6 w-6 text-accent" />
+                      ) : (
+                         <XCircle className="h-6 w-6 text-destructive" />
+                      )}
+                      <p className={cn("text-lg font-semibold", feedback === 'correct' ? 'text-accent' : 'text-destructive')}>
+                         {feedback === 'correct' ? "Excellent!" : `The correct answer is: ${currentQuestion.correctAnswer}`}
+                      </p>
+                    </div>
+                    <Button onClick={handleContinue} className="w-full sm:w-auto">
+                      Continue <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
                   </div>
                 )}
               </CardContent>
