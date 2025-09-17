@@ -9,14 +9,19 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import type { QuestionType, GameDifficulty } from '@/lib/types';
+
 
 // Define the schema for a question
 const QuestionSchema = z.object({
   id: z.string().describe('Unique identifier for the question.'),
+  level: z.number().describe('The level of the question.'),
+  type: z.string().describe('The type of the question.'),
   text: z.string().describe('The text of the question.'),
   options: z.array(z.string()).describe('Possible answer options for the question.'),
   correctAnswer: z.string().describe('The correct answer to the question.'),
   difficulty: z.enum(['easy', 'medium', 'hard']).describe('Difficulty level of the question.'),
+  explanation: z.string().optional().describe('Explanation for the correct answer.'),
 });
 
 export type Question = z.infer<typeof QuestionSchema>;
