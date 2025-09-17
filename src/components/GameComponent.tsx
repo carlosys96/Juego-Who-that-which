@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -18,19 +19,16 @@ import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds'
 import { adaptQuestionsToUserPerformance } from '@/ai/flows/adapt-questions-to-user-performance.flow';
 import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerSession } from '@/lib/types';
 import {
-  AlertTriangle,
   Award,
-  BarChart,
   CheckCircle2,
   ChevronRight,
   Home,
   Loader2,
   Music,
-  MusicOff,
   Star,
-  Timer,
   Trophy,
   XCircle,
+  VolumeX,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -110,10 +108,10 @@ export default function GameComponent() {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [gameState, currentQuestion]);
+  }, [gameState, currentQuestion, handleAnswer]);
 
 
-  const handleAnswer = (answer: string) => {
+  const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
 
     const isCorrect = answer === currentQuestion.correctAnswer;
@@ -140,7 +138,7 @@ export default function GameComponent() {
         }
       }
     }, 1500);
-  };
+  }, [currentQuestion, currentLevel, feedback, questionIndex]);
 
   const handleNextLevel = () => {
     const nextLevel = currentLevel + 1;
@@ -309,7 +307,7 @@ export default function GameComponent() {
                 <span className="font-semibold">{playerInfo.name}</span>
              </div>
              <Button variant="ghost" size="icon" onClick={toggleMusicHandler} aria-label="Toggle Music">
-                {isMusicOn ? <Music className="h-5 w-5"/> : <MusicOff className="h-5 w-5"/>}
+                {isMusicOn ? <Music className="h-5 w-5"/> : <VolumeX className="h-5 w-5"/>}
              </Button>
           </div>
        </header>
