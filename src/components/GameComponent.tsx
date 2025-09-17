@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { questions as allQuestions } from '@/lib/questions';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds';
@@ -43,7 +44,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
 
 const QUESTIONS_PER_LEVEL = 10;
-const TIMED_QUESTION_DURATION = 15; // seconds
+const TIMED_QUESTION_DURATION = 30; // seconds for hard questions
 
 export default function GameComponent() {
   const router = useRouter();
@@ -98,9 +99,17 @@ export default function GameComponent() {
   const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
 
-    const processedAnswer = answer.trim().toLowerCase();
     setSelectedAnswer(answer);
-    const isCorrect = processedAnswer === currentQuestion.correctAnswer.toLowerCase();
+    
+    let isCorrect = false;
+    if (currentQuestion.type === 'sentence-completion' && playerInfo.difficulty === 'hard') {
+        // Normalize both answers for comparison
+        const normalize = (str: string) => str.trim().toLowerCase().replace(/[.,'"]/g, '');
+        isCorrect = normalize(answer) === normalize(currentQuestion.correctAnswer);
+    } else {
+        const processedAnswer = answer.trim().toLowerCase();
+        isCorrect = processedAnswer === currentQuestion.correctAnswer.toLowerCase();
+    }
     
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     if (isCorrect) {
@@ -112,17 +121,17 @@ export default function GameComponent() {
 
     setUserPerformance(prev => [...prev, { questionId: currentQuestion.id, correct: isCorrect, chosenAnswer: answer }]);
 
-  }, [currentQuestion, feedback]);
+  }, [currentQuestion, feedback, playerInfo.difficulty]);
   
   useEffect(() => {
-    const isTimed = currentQuestion?.type === 'timed-choice' || currentQuestion?.type === 'sentence-completion';
+    const isTimed = currentQuestion?.type === 'sentence-completion' && playerInfo.difficulty === 'hard';
     if (gameState === 'playing' && isTimed && !feedback) {
       setTimer(TIMED_QUESTION_DURATION);
       const interval = setInterval(() => {
         setTimer(prev => {
           if (prev <= 1) {
             clearInterval(interval);
-            handleAnswer('timeout');
+            handleAnswer(inputValue || 'timeout');
             return 0;
           }
           return prev - 1;
@@ -130,7 +139,7 @@ export default function GameComponent() {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [gameState, currentQuestion, feedback, handleAnswer]);
+  }, [gameState, currentQuestion, feedback, handleAnswer, playerInfo.difficulty, inputValue]);
 
   const startLevel = useCallback(async () => {
     setGameState('idle');
@@ -220,11 +229,16 @@ export default function GameComponent() {
             <AlertDialogDescription className="space-y-4 pt-4 text-left">
                <div className="text-foreground p-3 bg-muted rounded-md">
                  <p className="font-semibold mb-2">Your question was:</p>
-                 <p>{currentQuestion.text.replace('___', `"${answerToShow}"`)}</p>
+                 <p>{currentQuestion.text}</p>
+               </div>
+               <div className="text-foreground p-3 bg-muted rounded-md">
+                 <p className="font-semibold mb-2">Your answer:</p>
+                 <p>"{answerToShow}"</p>
                </div>
               {!isCorrect && (
-                <div>
-                  <span className="font-semibold text-foreground">The correct answer is:</span> "{currentQuestion.correctAnswer}"
+                <div className="text-foreground p-3 bg-green-500/10 rounded-md">
+                  <p className="font-semibold text-green-700 dark:text-green-400 mb-2">The correct answer is:</p>
+                  <p>"{currentQuestion.correctAnswer}"</p>
                 </div>
               )}
               {currentQuestion.explanation && (
@@ -257,7 +271,8 @@ export default function GameComponent() {
     
     switch (gameState) {
       case 'playing':
-        const isTimed = currentQuestion?.type === 'timed-choice' || currentQuestion?.type === 'sentence-completion';
+        const isTimed = currentQuestion?.type === 'sentence-completion' && playerInfo.difficulty === 'hard';
+        const isFullSentenceCompletion = playerInfo.difficulty === 'hard' && currentQuestion?.type === 'sentence-completion';
         return (
           <Card className={cn(
             "w-full max-w-2xl transition-all duration-300"
@@ -288,16 +303,28 @@ export default function GameComponent() {
                   ))}
                 </p>
                 {currentQuestion.type === 'sentence-completion' ? (
-                  <form onSubmit={handleSentenceCompletionSubmit} className="w-full max-w-sm flex gap-2">
-                    <Input 
-                      type="text"
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      placeholder="Type your answer"
-                      disabled={!!feedback}
-                      autoFocus
-                    />
-                    <Button type="submit" disabled={!!feedback}>Submit</Button>
+                  <form onSubmit={handleSentenceCompletionSubmit} className="w-full max-w-lg flex flex-col gap-2">
+                    {isFullSentenceCompletion ? (
+                        <Textarea 
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          placeholder="Write the full sentence here..."
+                          disabled={!!feedback}
+                          autoFocus
+                          rows={3}
+                          className="text-base"
+                        />
+                    ) : (
+                        <Input 
+                          type="text"
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          placeholder="Type your answer"
+                          disabled={!!feedback}
+                          autoFocus
+                        />
+                    )}
+                    <Button type="submit" disabled={!inputValue.trim() || !!feedback}>Submit</Button>
                   </form>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
