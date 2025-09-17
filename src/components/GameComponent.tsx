@@ -64,10 +64,13 @@ export default function GameComponent() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
   const gameLevels = useMemo(() => {
-    if (playerInfo.difficulty === 'easy') return [1];
-    if (playerInfo.difficulty === 'medium') return [2, 1];
-    if (playerInfo.difficulty === 'hard') return [3, 2, 1];
-    return [1]; // Default
+    const difficultyMap: Record<GameDifficulty, number[]> = {
+      easy: allQuestions.filter(q => q.difficulty === 'easy').map(q => q.level),
+      medium: allQuestions.filter(q => q.difficulty === 'medium').map(q => q.level),
+      hard: allQuestions.filter(q => q.difficulty === 'hard').map(q => q.level),
+    };
+    const levels = difficultyMap[playerInfo.difficulty] || [1];
+    return [...new Set(levels)].sort();
   }, [playerInfo.difficulty]);
   
   const currentLevel = useMemo(() => gameLevels[currentLevelIndex], [gameLevels, currentLevelIndex]);
@@ -99,14 +102,14 @@ export default function GameComponent() {
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     if (isCorrect) {
       playCorrectSound();
-      setScore(s => s + 10 * currentLevel);
+      setScore(s => s + 10 * currentQuestion.level);
     } else {
       playIncorrectSound();
     }
 
     setUserPerformance(prev => [...prev, { questionId: currentQuestion.id, correct: isCorrect, chosenAnswer: answer }]);
 
-  }, [currentQuestion, currentLevel, feedback]);
+  }, [currentQuestion, feedback]);
   
   useEffect(() => {
     if (gameState === 'playing' && currentQuestion?.type === 'timed-choice' && !feedback) {
@@ -128,8 +131,9 @@ export default function GameComponent() {
   const startLevel = useCallback(async () => {
     setGameState('idle');
     setIsAiLoading(true);
-    const levelQuestions = allQuestions.filter(q => gameLevels.includes(q.level));
 
+    const questionsForDifficulty = allQuestions.filter(q => q.difficulty === playerInfo.difficulty);
+    
     const performanceDataForAI = userPerformance.map(p => ({
       questionId: p.questionId,
       correct: p.correct,
@@ -137,21 +141,21 @@ export default function GameComponent() {
     
     try {
       const adaptedQuestions = await adaptQuestionsToUserPerformance({
-        questions: levelQuestions,
+        questions: questionsForDifficulty,
         userPerformanceData: performanceDataForAI,
       });
       const shuffledQuestions = [...adaptedQuestions].sort(() => 0.5 - Math.random());
       setQuestionQueue(shuffledQuestions.slice(0, QUESTIONS_PER_LEVEL));
     } catch(e) {
       console.error("AI flow failed, falling back to default questions.", e);
-      const shuffledQuestions = [...levelQuestions].sort(() => 0.5 - Math.random());
+      const shuffledQuestions = [...questionsForDifficulty].sort(() => 0.5 - Math.random());
       setQuestionQueue(shuffledQuestions.slice(0, QUESTIONS_PER_LEVEL));
     }
     
     setQuestionIndex(0);
     setIsAiLoading(false);
     setGameState('playing');
-  }, [userPerformance, gameLevels]);
+  }, [userPerformance, playerInfo.difficulty]);
   
   useEffect(() => {
     if (!playerInfo?.name) {
@@ -186,7 +190,7 @@ export default function GameComponent() {
   }
   
   const renderFeedbackDialog = () => {
-    if (!feedback) return null;
+    if (!feedback || !currentQuestion) return null;
 
     const isCorrect = feedback === 'correct';
 
@@ -202,15 +206,19 @@ export default function GameComponent() {
               )}
               {isCorrect ? 'Excellent!' : 'Incorrect'}
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2 pt-2">
+            <AlertDialogDescription className="space-y-4 pt-4 text-left">
+               <div className="text-foreground p-3 bg-muted rounded-md">
+                 <p className="font-semibold mb-2">Your question was:</p>
+                 <p>{currentQuestion.text.replace('___', `"${selectedAnswer}"`)}</p>
+               </div>
               {!isCorrect && (
                 <div>
-                  <span className="font-semibold">The correct answer is:</span> "{currentQuestion.correctAnswer}"
+                  <span className="font-semibold text-foreground">The correct answer is:</span> "{currentQuestion.correctAnswer}"
                 </div>
               )}
               {currentQuestion.explanation && (
                  <div>
-                   <span className="font-semibold">Explanation:</span> {currentQuestion.explanation}
+                   <span className="font-semibold text-foreground">Explanation:</span> {currentQuestion.explanation}
                  </div>
               )}
             </AlertDialogDescription>
@@ -239,7 +247,9 @@ export default function GameComponent() {
     switch (gameState) {
       case 'playing':
         return (
-          <Card className="w-full max-w-2xl transition-all duration-300">
+          <Card className={cn(
+            "w-full max-w-2xl transition-all duration-300",
+          )}>
             <CardHeader>
               <div className="flex justify-between items-center mb-2">
                 <CardTitle className="font-headline text-2xl">
@@ -272,7 +282,10 @@ export default function GameComponent() {
                       key={option}
                       variant="outline"
                       size="lg"
-                      className="h-auto py-4 text-base"
+                      className={cn(
+                        "h-auto py-4 text-base transition-colors duration-300",
+                        selectedAnswer === option && (feedback === 'correct' ? 'bg-accent text-accent-foreground border-accent' : 'bg-destructive/20 text-destructive-foreground border-destructive')
+                      )}
                       onClick={() => handleAnswer(option)}
                       disabled={!!feedback}
                     >
@@ -288,7 +301,7 @@ export default function GameComponent() {
         return (
           <Card className="w-full max-w-md text-center">
             <CardHeader>
-              <CardTitle className="font-headline text-3xl">Level {currentLevel} Complete!</CardTitle>
+              <CardTitle className="font-headline text-3xl">Level Complete!</CardTitle>
               <CardDescription>Great job! Get ready for the next challenge.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -363,3 +376,5 @@ export default function GameComponent() {
     </div>
   );
 }
+
+    
