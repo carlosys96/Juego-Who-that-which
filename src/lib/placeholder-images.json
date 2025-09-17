@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "avatar1",
+      "description": "A playful monster avatar.",
+      "imageUrl": "https://picsum.photos/seed/avatar1/200/200",
+      "imageHint": "monster avatar"
+    },
+    {
+      "id": "avatar2",
+      "description": "A cool robot avatar.",
+      "imageUrl": "https://picsum.photos/seed/avatar2/200/200",
+      "imageHint": "robot avatar"
+    },
+    {
+      "id": "avatar3",
+      "description": "A friendly alien avatar.",
+      "imageUrl": "https://picsum.photos/seed/avatar3/200/200",
+      "imageHint": "alien avatar"
+    },
+    {
+      "id": "avatar4",
+      "description": "A superhero avatar.",
+      "imageUrl": "https://picsum.photos/seed/avatar4/200/200",
+      "imageHint": "superhero avatar"
+    }
+  ]
 }
