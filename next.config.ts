@@ -4,9 +4,6 @@ const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
 
 const nextConfig: NextConfig = {
   /* config options here */
-  output: 'export',
-  assetPrefix: isGithubActions ? '/Juego-Who-that-which/' : undefined,
-  basePath: isGithubActions ? '/Juego-Who-that-which' : undefined,
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -34,7 +31,6 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    unoptimized: true,
   },
 };
 
