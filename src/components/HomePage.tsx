@@ -26,7 +26,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import useLocalStorage from '@/hooks/use-local-storage';
-import type { PlayerScore, GameDifficulty } from '@/lib/types';
+import type { PlayerScore, GameDifficulty, PlayerInfo } from '@/lib/types';
 import { RelatixLogo } from './icons';
 import { cn } from '@/lib/utils';
 import { Trophy } from 'lucide-react';
@@ -38,7 +38,7 @@ export default function HomePage() {
   const [selectedAvatar, setSelectedAvatar] = useState(PlaceHolderImages[0].imageUrl);
   const [difficulty, setDifficulty] = useState<GameDifficulty>('easy');
   const [highScores] = useLocalStorage<PlayerScore[]>('relatix-highscores', []);
-  const [, setPlayerInfo] = useLocalStorage('relatix-player', null);
+  const [, setPlayerInfo] = useLocalStorage<PlayerInfo | null>('relatix-player', null);
 
   const handleStartGame = () => {
     if (name.trim()) {
