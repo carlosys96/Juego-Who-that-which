@@ -63,19 +63,6 @@ export default function GameComponent() {
   const currentLevel = useMemo(() => gameLevels[currentLevelIndex], [gameLevels, currentLevelIndex]);
 
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
-
-  const handleContinue = () => {
-    setFeedback(null);
-    if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
-      setQuestionIndex(i => i + 1);
-    } else {
-      if (currentLevelIndex < gameLevels.length - 1) {
-        setGameState('level-transition');
-      } else {
-        setGameState('finished');
-      }
-    }
-  };
   
   const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
@@ -94,6 +81,19 @@ export default function GameComponent() {
 
   }, [currentQuestion, currentLevel, feedback]);
 
+  const handleContinue = () => {
+    setFeedback(null);
+    if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
+      setQuestionIndex(i => i + 1);
+    } else {
+      if (currentLevelIndex < gameLevels.length - 1) {
+        setGameState('level-transition');
+      } else {
+        setGameState('finished');
+      }
+    }
+  };
+  
   const startLevel = useCallback(async (level: number) => {
     setGameState('idle');
     setIsAiLoading(true);
@@ -201,7 +201,7 @@ export default function GameComponent() {
             </CardHeader>
             {currentQuestion ? (
               <CardContent className="flex flex-col items-center text-center">
-                {currentQuestion.type === 'timed-choice' && (
+                {currentQuestion.type === 'timed-choice' && !feedback && (
                   <div className="w-full mb-4">
                     <div className="relative h-2 bg-secondary rounded-full overflow-hidden">
                        <div className="absolute top-0 left-0 h-full bg-destructive animate-progress-bar" style={{ animationDuration: `${TIMED_QUESTION_DURATION}s`}}></div>
