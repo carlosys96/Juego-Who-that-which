@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   Card,
@@ -55,6 +54,35 @@ export default function GameComponent() {
   const [timer, setTimer] = useState(TIMED_QUESTION_DURATION);
 
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
+
+  const handleAnswer = useCallback((answer: string) => {
+    if (feedback) return; // Prevent multiple answers
+
+    const isCorrect = answer === currentQuestion.correctAnswer;
+    
+    setFeedback(isCorrect ? 'correct' : 'incorrect');
+    if (isCorrect) {
+      playCorrectSound();
+      setScore(s => s + 10 * currentLevel);
+    } else {
+      playIncorrectSound();
+    }
+
+    setUserPerformance(prev => [...prev, { questionId: currentQuestion.id, correct: isCorrect, chosenAnswer: answer }]);
+
+    setTimeout(() => {
+      setFeedback(null);
+      if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
+        setQuestionIndex(i => i + 1);
+      } else {
+        if (currentLevel < 3) {
+          setGameState('level-transition');
+        } else {
+          setGameState('finished');
+        }
+      }
+    }, 1500);
+  }, [currentQuestion, currentLevel, feedback, questionIndex]);
 
   const startLevel = useCallback(async (level: number) => {
     setGameState('idle');
@@ -110,35 +138,6 @@ export default function GameComponent() {
     }
   }, [gameState, currentQuestion, handleAnswer]);
 
-
-  const handleAnswer = useCallback((answer: string) => {
-    if (feedback) return; // Prevent multiple answers
-
-    const isCorrect = answer === currentQuestion.correctAnswer;
-    
-    setFeedback(isCorrect ? 'correct' : 'incorrect');
-    if (isCorrect) {
-      playCorrectSound();
-      setScore(s => s + 10 * currentLevel);
-    } else {
-      playIncorrectSound();
-    }
-
-    setUserPerformance(prev => [...prev, { questionId: currentQuestion.id, correct: isCorrect, chosenAnswer: answer }]);
-
-    setTimeout(() => {
-      setFeedback(null);
-      if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
-        setQuestionIndex(i => i + 1);
-      } else {
-        if (currentLevel < 3) {
-          setGameState('level-transition');
-        } else {
-          setGameState('finished');
-        }
-      }
-    }, 1500);
-  }, [currentQuestion, currentLevel, feedback, questionIndex]);
 
   const handleNextLevel = () => {
     const nextLevel = currentLevel + 1;
