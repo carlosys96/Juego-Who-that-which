@@ -8,11 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import type { PlayerSession } from '@/lib/types';
+import { questions as allQuestions } from '@/lib/questions';
 import { Download, Lock, CheckCircle2, XCircle, LogIn } from 'lucide-react';
 import { RelatixLogo } from './icons';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 const ADMIN_PASSWORD = '270219';
+
+const questionsMap = new Map(allQuestions.map(q => [q.id, q.text]));
 
 export default function AdminPanel() {
   const [password, setPassword] = useState('');
@@ -30,25 +33,27 @@ export default function AdminPanel() {
   };
 
   const downloadCSV = () => {
-    const headers = ['PlayerName', 'PlayerAvatar', 'FinalScore', 'Date', 'QuestionID', 'Correct', 'ChosenAnswer'];
+    const headers = ['PlayerName', 'PlayerAvatar', 'FinalScore', 'Date', 'QuestionID', 'QuestionText', 'Correct', 'ChosenAnswer'];
     let csvContent = headers.join(',') + '\n';
 
     playerSessions.forEach(session => {
       if (session.performance.length > 0) {
         session.performance.forEach(perf => {
+          const questionText = questionsMap.get(perf.questionId) || 'Question not found';
           const row = [
             session.name,
             session.avatar,
             session.score,
             session.date,
             perf.questionId,
+            `"${questionText.replace(/"/g, '""')}"`,
             perf.correct,
             `"${perf.chosenAnswer.replace(/"/g, '""')}"`
           ].join(',');
           csvContent += row + '\n';
         });
       } else {
-        const row = [session.name, session.avatar, session.score, session.date, '', '', ''].join(',');
+        const row = [session.name, session.avatar, session.score, session.date, '', '', '', ''].join(',');
         csvContent += row + '\n';
       }
     });
@@ -140,7 +145,7 @@ export default function AdminPanel() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Question ID</TableHead>
+                        <TableHead>Question</TableHead>
                         <TableHead>Chosen Answer</TableHead>
                         <TableHead className="text-right">Result</TableHead>
                       </TableRow>
@@ -148,7 +153,7 @@ export default function AdminPanel() {
                     <TableBody>
                       {session.performance.map((perf, perfIndex) => (
                         <TableRow key={perfIndex}>
-                          <TableCell>{perf.questionId}</TableCell>
+                          <TableCell className="font-medium">{questionsMap.get(perf.questionId) || perf.questionId}</TableCell>
                           <TableCell>"{perf.chosenAnswer}"</TableCell>
                           <TableCell className="text-right">
                             {perf.correct ? (
