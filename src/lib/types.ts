@@ -9,6 +9,7 @@ export interface AppQuestion {
   options: string[];
   correctAnswer: string;
   difficulty: GameDifficulty;
+  explanation?: string;
 }
 
 export interface PlayerScore {

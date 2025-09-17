@@ -10,6 +10,7 @@ export const questions: AppQuestion[] = [
     options: ['who', 'which', 'that'],
     correctAnswer: 'who',
     difficulty: 'easy',
+    explanation: 'Use "who" for people.',
   },
   {
     id: '2',
@@ -19,6 +20,7 @@ export const questions: AppQuestion[] = [
     options: ['who', 'which', 'that'],
     correctAnswer: 'that',
     difficulty: 'easy',
+    explanation: 'Use "that" or "which" for things. "That" is very common.',
   },
   {
     id: '3',
@@ -28,6 +30,7 @@ export const questions: AppQuestion[] = [
     options: ['True', 'False'],
     correctAnswer: 'False',
     difficulty: 'easy',
+    explanation: '"Who" is used for people. For a car, you should use "that" or "which".',
   },
   {
     id: '4',
@@ -37,6 +40,7 @@ export const questions: AppQuestion[] = [
     options: ['who', 'which', 'that'],
     correctAnswer: 'who',
     difficulty: 'easy',
+    explanation: 'Use "who" to refer to people.',
   },
   {
     id: '5',
@@ -46,6 +50,7 @@ export const questions: AppQuestion[] = [
     options: ['who', 'which', 'that'],
     correctAnswer: 'which',
     difficulty: 'easy',
+    explanation: 'Use "which" or "that" for things. "Which" is often used for non-essential information, but is correct here too.',
   },
   // Level 2: Intermediate, Fill-in-the-blank
   {
@@ -56,6 +61,7 @@ export const questions: AppQuestion[] = [
     options: ['who', 'whose', 'which'],
     correctAnswer: 'whose',
     difficulty: 'medium',
+    explanation: 'Use "whose" to show possession.',
   },
   {
     id: '7',
@@ -65,6 +71,7 @@ export const questions: AppQuestion[] = [
     options: ['that', 'where', 'who'],
     correctAnswer: 'where',
     difficulty: 'medium',
+    explanation: 'Use "where" to refer to a place.',
   },
   {
     id: '8',
@@ -74,6 +81,7 @@ export const questions: AppQuestion[] = [
     options: ['True', 'False'],
     correctAnswer: 'False',
     difficulty: 'medium',
+    explanation: 'Use "which" (not "that") in non-defining clauses, which are set off by commas.',
   },
   {
     id: '9',
@@ -83,6 +91,7 @@ export const questions: AppQuestion[] = [
     options: ['why', 'which', 'who'],
     correctAnswer: 'why',
     difficulty: 'medium',
+    explanation: 'Use "why" to refer to a reason.',
   },
   {
     id: '10',
@@ -92,6 +101,7 @@ export const questions: AppQuestion[] = [
     options: ['which', 'that', 'whom'],
     correctAnswer: 'whom',
     difficulty: 'medium',
+    explanation: 'Use "whom" as the object of a verb. (He had admired "her" -> "whom").',
   },
   // Level 3: Advanced, Timed
   {
@@ -102,6 +112,7 @@ export const questions: AppQuestion[] = [
     options: ['which', 'that', 'who'],
     correctAnswer: 'which',
     difficulty: 'hard',
+    explanation: 'Use "which" in a non-defining clause (set off by commas) to give extra information about a thing.',
   },
   {
     id: '12',
@@ -111,6 +122,7 @@ export const questions: AppQuestion[] = [
     options: ['which', 'that', 'who'],
     correctAnswer: 'that',
     difficulty: 'hard',
+    explanation: 'Use "that" after superlatives like "the only one".',
   },
   {
     id: '13',
@@ -120,6 +132,7 @@ export const questions: AppQuestion[] = [
     options: ['True', 'False'],
     correctAnswer: 'False',
     difficulty: 'hard',
+    explanation: '"Whom" is an object pronoun. Here, the pronoun is the subject of "passed", so it should be "who".',
   },
   {
     id: '14',
@@ -129,6 +142,7 @@ export const questions: AppQuestion[] = [
     options: ['who', 'whose', 'which'],
     correctAnswer: 'whose',
     difficulty: 'hard',
+    explanation: 'Use "whose" to show possession (the car belongs to the person).',
   },
   {
     id: '15',
@@ -138,5 +152,6 @@ export const questions: AppQuestion[] = [
     options: ['who', 'which', 'that'],
     correctAnswer: 'that',
     difficulty: 'hard',
+    explanation: 'Use "that" or "which" for things in a defining clause. "That" is very common.',
   },
 ];

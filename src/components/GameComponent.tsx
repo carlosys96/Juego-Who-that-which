@@ -45,12 +45,6 @@ import { RelatixLogo } from './icons';
 const QUESTIONS_PER_LEVEL = 5;
 const TIMED_QUESTION_DURATION = 10; // seconds
 
-const difficultyToLevels: Record<GameDifficulty, number[]> = {
-  easy: [1],
-  medium: [2],
-  hard: [3],
-};
-
 export default function GameComponent() {
   const router = useRouter();
   const [playerInfo] = useLocalStorage<PlayerInfo>('relatix-player', { name: 'Player', avatar: '', difficulty: 'easy' });
@@ -71,8 +65,8 @@ export default function GameComponent() {
 
   const gameLevels = useMemo(() => {
     if (playerInfo.difficulty === 'easy') return [1];
-    if (playerInfo.difficulty === 'medium') return [2];
-    if (playerInfo.difficulty === 'hard') return [3];
+    if (playerInfo.difficulty === 'medium') return [2, 1];
+    if (playerInfo.difficulty === 'hard') return [3, 2, 1];
     return [1]; // Default
   }, [playerInfo.difficulty]);
   
@@ -208,11 +202,18 @@ export default function GameComponent() {
               )}
               {isCorrect ? 'Excellent!' : 'Incorrect'}
             </AlertDialogTitle>
-            {!isCorrect && (
-              <AlertDialogDescription>
-                The correct answer is: "{currentQuestion.correctAnswer}"
-              </AlertDialogDescription>
-            )}
+            <AlertDialogDescription className="space-y-2 pt-2">
+              {!isCorrect && (
+                <div>
+                  <span className="font-semibold">The correct answer is:</span> "{currentQuestion.correctAnswer}"
+                </div>
+              )}
+              {currentQuestion.explanation && (
+                 <div>
+                   <span className="font-semibold">Explanation:</span> {currentQuestion.explanation}
+                 </div>
+              )}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={handleContinue}>
@@ -362,5 +363,3 @@ export default function GameComponent() {
     </div>
   );
 }
-
-    
