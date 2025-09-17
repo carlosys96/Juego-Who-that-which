@@ -1,33 +1,16 @@
 'use server';
 /**
- * @fileOverview This file defines a Genkit flow to adapt questions based on historical user performance.
+ * @fileOverview This file defines a Genkit flow to identify problematic questions based on user performance.
  *
- * - adaptQuestionsToUserPerformance - A function that retrieves questions and adds those that have historically been answered incorrectly.
+ * - adaptQuestionsToUserPerformance - A function that returns a list of question IDs that have been answered incorrectly.
  * - AdaptQuestionsToUserPerformanceInput - The input type for the adaptQuestionsToUserPerformance function.
  * - AdaptQuestionsToUserPerformanceOutput - The return type for the adaptQuestionsToUserPerformance function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import type { QuestionType, GameDifficulty } from '@/lib/types';
-
-
-// Define the schema for a question
-const QuestionSchema = z.object({
-  id: z.string().describe('Unique identifier for the question.'),
-  level: z.number().describe('The level of the question.'),
-  type: z.string().describe('The type of the question.'),
-  text: z.string().describe('The text of the question.'),
-  options: z.array(z.string()).describe('Possible answer options for the question.'),
-  correctAnswer: z.string().describe('The correct answer to the question.'),
-  difficulty: z.enum(['easy', 'medium', 'hard']).describe('Difficulty level of the question.'),
-  explanation: z.string().optional().describe('Explanation for the correct answer.'),
-});
-
-export type Question = z.infer<typeof QuestionSchema>;
 
 const AdaptQuestionsToUserPerformanceInputSchema = z.object({
-  questions: z.array(QuestionSchema).describe('Array of questions to adapt based on user performance.'),
   userPerformanceData: z.array(
     z.object({
       questionId: z.string().describe('The ID of the question answered.'),
@@ -38,7 +21,7 @@ const AdaptQuestionsToUserPerformanceInputSchema = z.object({
 
 export type AdaptQuestionsToUserPerformanceInput = z.infer<typeof AdaptQuestionsToUserPerformanceInputSchema>;
 
-const AdaptQuestionsToUserPerformanceOutputSchema = z.array(QuestionSchema).describe('Adapted array of questions based on user performance data.');
+const AdaptQuestionsToUserPerformanceOutputSchema = z.array(z.string()).describe('An array of question IDs that the user has answered incorrectly.');
 
 export type AdaptQuestionsToUserPerformanceOutput = z.infer<typeof AdaptQuestionsToUserPerformanceOutputSchema>;
 
@@ -53,24 +36,14 @@ const adaptQuestionsToUserPerformanceFlow = ai.defineFlow(
     outputSchema: AdaptQuestionsToUserPerformanceOutputSchema,
   },
   async input => {
-    const {questions, userPerformanceData} = input;
+    const { userPerformanceData } = input;
 
-    // Identify problematic questions based on user performance data
+    // Identify problematic question IDs based on user performance data
     const problematicQuestionIds = userPerformanceData
       .filter(data => !data.correct)
       .map(data => data.questionId);
 
-    // Filter out duplicate question IDs
-    const uniqueProblematicQuestionIds = [...new Set(problematicQuestionIds)];
-
-    // Retrieve the problematic questions from the original questions array
-    const problematicQuestions = questions.filter(question =>
-      uniqueProblematicQuestionIds.includes(question.id)
-    );
-
-    // Add problematic questions back into the questions array to increase their frequency
-    const adaptedQuestions = [...questions, ...problematicQuestions];
-
-    return adaptedQuestions;
+    // Return unique problematic question IDs
+    return [...new Set(problematicQuestionIds)];
   }
 );

@@ -66,13 +66,13 @@ export default function GameComponent() {
   const [inputValue, setInputValue] = useState('');
 
   const gameLevels = useMemo(() => {
-    const difficultyMap: Record<GameDifficulty, number[]> = {
+    const difficultyMap: Record<GameDifficulty, (1 | 2 | 3)[]> = {
       easy: allQuestions.filter(q => q.difficulty === 'easy').map(q => q.level),
       medium: allQuestions.filter(q => q.difficulty === 'medium').map(q => q.level),
       hard: allQuestions.filter(q => q.difficulty === 'hard').map(q => q.level),
     };
     const levels = difficultyMap[playerInfo.difficulty] || [1];
-    return [...new Set(levels)].sort();
+    return [...new Set(levels)].sort() as (1|2|3)[];
   }, [playerInfo.difficulty]);
   
   const currentLevel = useMemo(() => gameLevels[currentLevelIndex], [gameLevels, currentLevelIndex]);
@@ -153,11 +153,13 @@ export default function GameComponent() {
     }));
     
     try {
-      const adaptedQuestions = await adaptQuestionsToUserPerformance({
-        questions: questionsForDifficulty,
+      const problematicQuestionIds = await adaptQuestionsToUserPerformance({
         userPerformanceData: performanceDataForAI,
       });
-      const shuffledQuestions = [...adaptedQuestions].sort(() => 0.5 - Math.random());
+      const problematicQuestions = allQuestions.filter(q => problematicQuestionIds.includes(q.id));
+      
+      const combinedQuestions = [...questionsForDifficulty, ...problematicQuestions];
+      const shuffledQuestions = [...combinedQuestions].sort(() => 0.5 - Math.random());
       setQuestionQueue(shuffledQuestions.slice(0, QUESTIONS_PER_LEVEL));
     } catch(e) {
       console.error("AI flow failed, falling back to default questions.", e);
