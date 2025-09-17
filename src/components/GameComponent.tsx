@@ -70,7 +70,7 @@ export default function GameComponent() {
   const currentLevel = useMemo(() => gameLevels[currentLevelIndex], [gameLevels, currentLevelIndex]);
 
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
-  
+
   const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
 
@@ -88,7 +88,7 @@ export default function GameComponent() {
     setUserPerformance(prev => [...prev, { questionId: currentQuestion.id, correct: isCorrect, chosenAnswer: answer }]);
 
   }, [currentQuestion, currentLevel, feedback]);
-
+  
   useEffect(() => {
     if (gameState === 'playing' && currentQuestion?.type === 'timed-choice' && !feedback) {
       setTimer(TIMED_QUESTION_DURATION);
@@ -344,5 +344,3 @@ export default function GameComponent() {
     </div>
   );
 }
-
-    
