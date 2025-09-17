@@ -89,6 +89,23 @@ export default function GameComponent() {
 
   }, [currentQuestion, currentLevel, feedback]);
 
+  useEffect(() => {
+    if (gameState === 'playing' && currentQuestion?.type === 'timed-choice' && !feedback) {
+      setTimer(TIMED_QUESTION_DURATION);
+      const interval = setInterval(() => {
+        setTimer(prev => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            handleAnswer('timeout');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [gameState, currentQuestion, feedback, handleAnswer]);
+
   const handleContinue = () => {
     setFeedback(null);
     setSelectedAnswer(null);
@@ -139,24 +156,6 @@ export default function GameComponent() {
     startLevel();
   }, [playerInfo, router, startLevel]);
 
-  useEffect(() => {
-    if (gameState === 'playing' && currentQuestion?.type === 'timed-choice' && !feedback) {
-      setTimer(TIMED_QUESTION_DURATION);
-      const interval = setInterval(() => {
-        setTimer(prev => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            handleAnswer('timeout');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [gameState, currentQuestion, handleAnswer, feedback]);
-
-
   const handleNextLevel = () => {
     const nextLevelIndex = currentLevelIndex + 1;
     if (nextLevelIndex < gameLevels.length) {
@@ -200,7 +199,7 @@ export default function GameComponent() {
     switch (gameState) {
       case 'playing':
         return (
-          <Card className={cn("w-full max-w-2xl transition-all duration-500", feedback && (feedback === 'correct' ? 'border-accent shadow-accent/20' : 'border-destructive shadow-destructive/20'))}>
+          <Card className={cn("w-full max-w-2xl transition-all duration-300", feedback && (feedback === 'correct' ? 'border-accent shadow-lg shadow-accent/20' : 'border-destructive shadow-lg shadow-destructive/20'))}>
             <CardHeader>
               <div className="flex justify-between items-center mb-2">
                 <CardTitle className="font-headline text-2xl">
@@ -233,9 +232,11 @@ export default function GameComponent() {
                       key={option}
                       variant="outline"
                       size="lg"
-                      className={cn("h-auto py-4 text-base", {
+                      className={cn("h-auto py-4 text-base transition-colors duration-300", {
                         "bg-accent text-accent-foreground hover:bg-accent": feedback === 'correct' && option === currentQuestion.correctAnswer,
                         "bg-destructive text-destructive-foreground hover:bg-destructive": feedback === 'incorrect' && selectedAnswer === option,
+                        "border-accent": feedback === 'correct' && option === currentQuestion.correctAnswer,
+                        "border-destructive": feedback === 'incorrect' && selectedAnswer === option,
                       })}
                       onClick={() => handleAnswer(option)}
                       disabled={!!feedback}
@@ -245,7 +246,7 @@ export default function GameComponent() {
                   ))}
                 </div>
                 {feedback && (
-                  <div className="mt-6 flex flex-col items-center gap-4 w-full">
+                  <div className="mt-6 flex flex-col items-center gap-4 w-full animate-in fade-in duration-500">
                     <div className="flex items-center gap-2">
                       {feedback === 'correct' ? (
                          <CheckCircle2 className="h-6 w-6 text-accent" />
@@ -343,3 +344,5 @@ export default function GameComponent() {
     </div>
   );
 }
+
+    
