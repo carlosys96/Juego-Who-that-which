@@ -25,7 +25,7 @@ import { questions as allQuestions } from '@/lib/questions';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds';
 import { adaptQuestionsToUserPerformance } from '@/ai/flows/adapt-questions-to-user-performance.flow';
-import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerSession, PlayerInfo, GameDifficulty } from '@/lib/types';
+import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerInfo, GameDifficulty } from '@/lib/types';
 import {
   Award,
   CheckCircle2,
@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
 
-const QUESTIONS_PER_LEVEL = 5;
+const QUESTIONS_PER_LEVEL = 10;
 const TIMED_QUESTION_DURATION = 10; // seconds
 
 export default function GameComponent() {
@@ -259,7 +259,7 @@ export default function GameComponent() {
                   <Star className="w-5 h-5 fill-primary" /> {score}
                 </div>
               </div>
-              <Progress value={questionQueue.length > 0 ? ((questionIndex + 1) / questionQueue.length) * 100 : 0} className="w-full" />
+              <Progress value={questionQueue.length > 0 ? (questionIndex / questionQueue.length) * 100 : 0} className="w-full" />
             </CardHeader>
             {currentQuestion ? (
               <CardContent className="flex flex-col items-center text-center">
@@ -376,5 +376,7 @@ export default function GameComponent() {
     </div>
   );
 }
+
+    
 
     
