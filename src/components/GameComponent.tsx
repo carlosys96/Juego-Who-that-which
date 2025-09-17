@@ -109,8 +109,10 @@ export default function GameComponent() {
   const handleContinue = () => {
     setFeedback(null);
     setSelectedAnswer(null);
-    if (questionIndex < questionQueue.length - 1) {
-      setQuestionIndex(i => i + 1);
+
+    const nextQuestionIndex = questionIndex + 1;
+    if (nextQuestionIndex < questionQueue.length) {
+      setQuestionIndex(nextQuestionIndex);
     } else {
       if (currentLevelIndex < gameLevels.length - 1) {
         setGameState('level-transition');
