@@ -58,8 +58,15 @@ export default function GameComponent() {
   const [isMusicOn, setIsMusicOn] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [timer, setTimer] = useState(TIMED_QUESTION_DURATION);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+
+  const gameLevels = useMemo(() => {
+    if (playerInfo.difficulty === 'easy') return [1];
+    if (playerInfo.difficulty === 'medium') return [2];
+    if (playerInfo.difficulty === 'hard') return [3];
+    return [1]; // Default
+  }, [playerInfo.difficulty]);
   
-  const gameLevels = useMemo(() => difficultyToLevels[playerInfo.difficulty] || [1, 2, 3], [playerInfo.difficulty]);
   const currentLevel = useMemo(() => gameLevels[currentLevelIndex], [gameLevels, currentLevelIndex]);
 
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
@@ -67,6 +74,7 @@ export default function GameComponent() {
   const handleAnswer = useCallback((answer: string) => {
     if (feedback) return; // Prevent multiple answers
 
+    setSelectedAnswer(answer);
     const isCorrect = answer === currentQuestion.correctAnswer;
     
     setFeedback(isCorrect ? 'correct' : 'incorrect');
@@ -83,6 +91,7 @@ export default function GameComponent() {
 
   const handleContinue = () => {
     setFeedback(null);
+    setSelectedAnswer(null);
     if (questionIndex < QUESTIONS_PER_LEVEL - 1) {
       setQuestionIndex(i => i + 1);
     } else {
@@ -94,10 +103,10 @@ export default function GameComponent() {
     }
   };
   
-  const startLevel = useCallback(async (level: number) => {
+  const startLevel = useCallback(async () => {
     setGameState('idle');
     setIsAiLoading(true);
-    const levelQuestions = allQuestions.filter(q => q.level === level);
+    const levelQuestions = allQuestions.filter(q => gameLevels.includes(q.level));
 
     const performanceDataForAI = userPerformance.map(p => ({
       questionId: p.questionId,
@@ -120,15 +129,15 @@ export default function GameComponent() {
     setQuestionIndex(0);
     setIsAiLoading(false);
     setGameState('playing');
-  }, [userPerformance]);
+  }, [userPerformance, gameLevels]);
   
   useEffect(() => {
     if (!playerInfo?.name) {
       router.push('/');
       return;
     }
-    startLevel(currentLevel);
-  }, [playerInfo, router, startLevel, currentLevel]);
+    startLevel();
+  }, [playerInfo, router, startLevel]);
 
   useEffect(() => {
     if (gameState === 'playing' && currentQuestion?.type === 'timed-choice' && !feedback) {
@@ -150,8 +159,12 @@ export default function GameComponent() {
 
   const handleNextLevel = () => {
     const nextLevelIndex = currentLevelIndex + 1;
-    setCurrentLevelIndex(nextLevelIndex);
-    startLevel(gameLevels[nextLevelIndex]);
+    if (nextLevelIndex < gameLevels.length) {
+      setCurrentLevelIndex(nextLevelIndex);
+      startLevel();
+    } else {
+      setGameState('finished');
+    }
   };
   
   const handleFinishGame = () => {
@@ -191,7 +204,7 @@ export default function GameComponent() {
             <CardHeader>
               <div className="flex justify-between items-center mb-2">
                 <CardTitle className="font-headline text-2xl">
-                  {gameLevels.length > 1 ? `Level ${currentLevel}` : `Difficulty: ${playerInfo.difficulty}`}
+                  {`Difficulty: ${playerInfo.difficulty}`}
                 </CardTitle>
                 <div className="flex items-center gap-2 font-mono text-lg font-bold text-primary">
                   <Star className="w-5 h-5 fill-primary" /> {score}
@@ -222,7 +235,7 @@ export default function GameComponent() {
                       size="lg"
                       className={cn("h-auto py-4 text-base", {
                         "bg-accent text-accent-foreground hover:bg-accent": feedback === 'correct' && option === currentQuestion.correctAnswer,
-                        "bg-destructive text-destructive-foreground hover:bg-destructive": feedback === 'incorrect' && option !== currentQuestion.correctAnswer,
+                        "bg-destructive text-destructive-foreground hover:bg-destructive": feedback === 'incorrect' && selectedAnswer === option,
                       })}
                       onClick={() => handleAnswer(option)}
                       disabled={!!feedback}
@@ -265,7 +278,7 @@ export default function GameComponent() {
                 </div>
               <p className="text-lg">Your score: <span className="font-bold text-primary">{score}</span></p>
               <Button onClick={handleNextLevel} className="w-full">
-                Start Level {gameLevels[currentLevelIndex + 1]} <ChevronRight className="ml-2 h-4 w-4"/>
+                Start Next Level <ChevronRight className="ml-2 h-4 w-4"/>
               </Button>
             </CardContent>
           </Card>
@@ -330,3 +343,5 @@ export default function GameComponent() {
     </div>
   );
 }
+
+    
