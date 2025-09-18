@@ -15,3 +15,5 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_STUDIO_6115963591_9307F }}'
           projectId: studio-6115963591-9307f
+        env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
