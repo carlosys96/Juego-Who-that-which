@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, limit, doc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const QUESTIONS_PER_LEVEL = 10;
@@ -178,6 +178,8 @@ export default function GameComponent() {
       const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as PlayerScore }));
 
       let shouldAddHighScore = false;
+      let toastMessage = "Your results are saved for the teacher panel. Good job!";
+      let toastTitle = "Score Saved!";
 
       if (highScores.length < HIGH_SCORE_LIMIT) {
         shouldAddHighScore = true;
@@ -185,24 +187,30 @@ export default function GameComponent() {
         const lowestHighScore = highScores[highScores.length - 1];
         if (score > lowestHighScore.score) {
           shouldAddHighScore = true;
-          // Delete the lowest score to make room for the new one.
-          await deleteDoc(doc(db, 'highscores', lowestHighScore.id));
+          // We'll delete the lowest score to make room for the new one.
+          const batch = writeBatch(db);
+          const newScoreRef = doc(collection(highScoresRef)); // new doc with random id
+          batch.set(newScoreRef, finalScore);
+          batch.delete(doc(db, 'highscores', lowestHighScore.id));
+          await batch.commit();
+          shouldAddHighScore = false; // We already handled it.
         }
       }
 
       if (shouldAddHighScore) {
         await addDoc(highScoresRef, finalScore);
-        toast({
-          title: "New High Score!",
-          description: "Your results have been saved to the global leaderboard.",
-        });
-      } else {
-        toast({
-          title: "Score Saved!",
-          description: "Your results are saved for the teacher panel. Good job!",
-        });
       }
       
+      if(shouldAddHighScore || (highScores.length >= HIGH_SCORE_LIMIT && score > (highScores[highScores.length - 1]?.score || 0))) {
+        toastTitle = "New High Score!";
+        toastMessage = "You made it to the global leaderboard!";
+      }
+
+      toast({
+        title: toastTitle,
+        description: toastMessage,
+      });
+
       // 3. If everything was successful, navigate home.
       router.push('/');
 
