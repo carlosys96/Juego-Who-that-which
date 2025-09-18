@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import useLocalStorage from '@/hooks/use-local-storage';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import type { PlayerSession } from '@/lib/types';
 import { questions as allQuestions } from '@/lib/questions';
-import { Download, Lock, CheckCircle2, XCircle, LogIn } from 'lucide-react';
+import { Download, Lock, CheckCircle2, XCircle, LogIn, Loader2 } from 'lucide-react';
 import { RelatixLogo } from './icons';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 
 const ADMIN_PASSWORD = '270219';
 
@@ -21,7 +22,8 @@ export default function AdminPanel() {
   const [password, setPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState('');
-  const [playerSessions] = useLocalStorage<PlayerSession[]>('relatix-sessions', []);
+  const [playerSessions, setPlayerSessions] = useState<PlayerSession[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const handleLogin = () => {
     if (password === ADMIN_PASSWORD) {
@@ -32,12 +34,33 @@ export default function AdminPanel() {
     }
   };
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchSessions = async () => {
+        setLoading(true);
+        try {
+          const sessionsCollection = collection(db, 'sessions');
+          const q = query(sessionsCollection, orderBy('date', 'desc'));
+          const querySnapshot = await getDocs(q);
+          const sessions = querySnapshot.docs.map(doc => doc.data() as PlayerSession);
+          setPlayerSessions(sessions);
+        } catch (err) {
+          console.error("Error fetching sessions: ", err);
+          setError("Could not load player data from the database.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchSessions();
+    }
+  }, [isAuthenticated]);
+
   const downloadCSV = () => {
     const headers = ['PlayerName', 'PlayerAvatar', 'FinalScore', 'Date', 'QuestionID', 'QuestionText', 'Correct', 'ChosenAnswer'];
     let csvContent = headers.join(',') + '\n';
 
     playerSessions.forEach(session => {
-      if (session.performance.length > 0) {
+      if (session.performance && session.performance.length > 0) {
         session.performance.forEach(perf => {
           const questionText = questionsMap.get(perf.questionId) || 'Question not found';
           const row = [
@@ -126,7 +149,11 @@ export default function AdminPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {playerSessions.length > 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : playerSessions.length > 0 ? (
           <Accordion type="multiple" className="w-full">
             {playerSessions.map((session, index) => (
               <AccordionItem value={`item-${index}`} key={index}>
@@ -142,30 +169,34 @@ export default function AdminPanel() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Question</TableHead>
-                        <TableHead>Chosen Answer</TableHead>
-                        <TableHead className="text-right">Result</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {session.performance.map((perf, perfIndex) => (
-                        <TableRow key={perfIndex}>
-                          <TableCell className="font-medium">{questionsMap.get(perf.questionId) || perf.questionId}</TableCell>
-                          <TableCell>"{perf.chosenAnswer}"</TableCell>
-                          <TableCell className="text-right">
-                            {perf.correct ? (
-                              <CheckCircle2 className="h-5 w-5 text-accent inline" />
-                            ) : (
-                              <XCircle className="h-5 w-5 text-destructive inline" />
-                            )}
-                          </TableCell>
+                  {session.performance && session.performance.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Question</TableHead>
+                          <TableHead>Chosen Answer</TableHead>
+                          <TableHead className="text-right">Result</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {session.performance.map((perf, perfIndex) => (
+                          <TableRow key={perfIndex}>
+                            <TableCell className="font-medium">{questionsMap.get(perf.questionId) || perf.questionId}</TableCell>
+                            <TableCell>"{perf.chosenAnswer}"</TableCell>
+                            <TableCell className="text-right">
+                              {perf.correct ? (
+                                <CheckCircle2 className="h-5 w-5 text-green-500 inline" />
+                              ) : (
+                                <XCircle className="h-5 w-5 text-destructive inline" />
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-4">No detailed performance data for this session.</p>
+                  )}
                 </AccordionContent>
               </AccordionItem>
             ))}

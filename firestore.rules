@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public read access to highscores for the leaderboard
+    match /highscores/{scoreId} {
+      allow read: if true;
+      allow write: if false; // Protect highscores from being written directly
+    }
+
+    // Allow users to write their own session data
+    // A more secure rule would involve user authentication
+    match /sessions/{sessionId} {
+      allow read, write: if true; // In a real app, you'd restrict this
+    }
+  }
+}

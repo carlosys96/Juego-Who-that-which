@@ -41,15 +41,17 @@ import {
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const QUESTIONS_PER_LEVEL = 10;
 const TIMED_QUESTION_DURATION = 30; // seconds for hard questions
 
 export default function GameComponent() {
   const router = useRouter();
+  const { toast } = useToast();
   const [playerInfo] = useLocalStorage<PlayerInfo>('relatix-player', { name: 'Player', avatar: '', difficulty: 'easy' });
-  const [highScores, setHighScores] = useLocalStorage<PlayerScore[]>('relatix-highscores', []);
-  const [playerSessions, setPlayerSessions] = useLocalStorage<PlayerSession[]>('relatix-sessions', []);
 
   const [gameState, setGameState] = useState<GameState>('idle');
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
@@ -60,6 +62,7 @@ export default function GameComponent() {
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [isMusicOn, setIsMusicOn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [timer, setTimer] = useState(TIMED_QUESTION_DURATION);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -74,8 +77,6 @@ export default function GameComponent() {
     return [...new Set(levels)].sort() as (1|2|3)[];
   }, [playerInfo.difficulty]);
   
-  const currentLevel = useMemo(() => gameLevels[currentLevelIndex], [gameLevels, currentLevelIndex]);
-
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
 
   const handleContinue = () => {
@@ -87,11 +88,7 @@ export default function GameComponent() {
     if (nextQuestionIndex < questionQueue.length) {
       setQuestionIndex(nextQuestionIndex);
     } else {
-      if (currentLevelIndex < gameLevels.length - 1) {
-        setGameState('level-transition');
-      } else {
-        setGameState('finished');
-      }
+      setGameState('finished');
     }
   };
 
@@ -102,7 +99,6 @@ export default function GameComponent() {
     
     let isCorrect = false;
     if (currentQuestion.type === 'sentence-completion' && playerInfo.difficulty === 'hard') {
-        // Normalize both answers for comparison
         const normalize = (str: string) => str.trim().toLowerCase().replace(/[.,'"]/g, '');
         isCorrect = normalize(answer) === normalize(currentQuestion.correctAnswer);
     } else {
@@ -113,7 +109,7 @@ export default function GameComponent() {
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     if (isCorrect) {
       playCorrectSound();
-      setScore(s => s + 10 * (currentQuestion.level || 1));
+      setScore(s => s + 10);
     } else {
       playIncorrectSound();
     }
@@ -140,7 +136,7 @@ export default function GameComponent() {
     }
   }, [gameState, currentQuestion, feedback, handleAnswer, playerInfo.difficulty, inputValue]);
 
-  const startLevel = useCallback(async () => {
+  const startGame = useCallback(async () => {
     setGameState('idle');
     setIsLoading(true);
 
@@ -149,6 +145,8 @@ export default function GameComponent() {
     setQuestionQueue(shuffledQuestions.slice(0, QUESTIONS_PER_LEVEL));
     
     setQuestionIndex(0);
+    setScore(0);
+    setUserPerformance([]);
     setIsLoading(false);
     setGameState('playing');
   }, [playerInfo.difficulty]);
@@ -158,22 +156,50 @@ export default function GameComponent() {
       router.push('/');
       return;
     }
-    startLevel();
+    startGame();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerInfo?.name, router]);
-
-  const handleNextLevel = () => {
-    setCurrentLevelIndex(prev => prev + 1);
-    startLevel();
-  };
   
-  const handleFinishGame = () => {
+  const handleFinishGame = async () => {
+    setIsSaving(true);
     const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date: new Date().toISOString() };
     const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
-    setHighScores([...highScores, finalScore].sort((a, b) => b.score - a.score).slice(0, 10));
-    setPlayerSessions([...playerSessions, sessionData]);
-    router.push('/');
+    try {
+      await addDoc(collection(db, 'sessions'), sessionData);
+      
+      const highScoresCollection = collection(db, 'highscores');
+      const q = query(highScoresCollection, orderBy('score', 'desc'), limit(1));
+      const querySnapshot = await getDocs(q);
+      
+      let isNewHighScore = true;
+      if (!querySnapshot.empty) {
+        const lowestHighScore = querySnapshot.docs[0].data().score;
+        if (score > lowestHighScore || querySnapshot.size < 10) {
+           await addDoc(highScoresCollection, finalScore);
+        } else {
+          isNewHighScore = false;
+        }
+      } else {
+        await addDoc(highScoresCollection, finalScore);
+      }
+
+      toast({
+        title: "Score Saved!",
+        description: "Your results have been saved to the global leaderboard.",
+      });
+
+    } catch (error) {
+      console.error("Error saving score: ", error);
+      toast({
+        title: "Error",
+        description: "Could not save your score. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+      router.push('/');
+    }
   };
 
   const toggleMusicHandler = () => {
@@ -246,7 +272,7 @@ export default function GameComponent() {
       return (
         <div className="flex flex-col items-center justify-center text-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <h2 className="text-2xl font-headline">Preparing Your Questions...</h2>
+          <h2 className="text-2xl font-headline">Preparing Your Game...</h2>
         </div>
       );
     }
@@ -331,44 +357,24 @@ export default function GameComponent() {
             ) : <p>Loading questions...</p>}
           </Card>
         );
-      case 'level-transition':
-        return (
-          <Card className="w-full max-w-md text-center">
-            <CardHeader>
-              <CardTitle className="font-headline text-3xl">Level Complete!</CardTitle>
-              <CardDescription>Great job! Get ready for the next challenge.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex justify-center">
-                    <Award className="w-24 h-24 text-primary"/>
-                </div>
-              <p className="text-lg">Your score: <span className="font-bold text-primary">{score}</span></p>
-              <Button onClick={handleNextLevel} className="w-full">
-                Start Next Level <ChevronRight className="ml-2 h-4 w-4"/>
-              </Button>
-            </CardContent>
-          </Card>
-        );
       case 'finished':
-        const isNewHighScore = score > 0 && (highScores.length < 5 || score > Math.min(...highScores.map(s => s.score)));
         return (
           <Card className="w-full max-w-md text-center">
             <CardHeader>
               <CardTitle className="font-headline text-3xl">Challenge Complete!</CardTitle>
-              {isNewHighScore && (
-                <div className="flex items-center justify-center gap-2 text-yellow-500 font-semibold">
-                  <Trophy className="w-6 h-6"/> New High Score!
-                </div>
-              )}
+              <div className="flex items-center justify-center gap-2 text-yellow-500 font-semibold">
+                <Trophy className="w-6 h-6"/> Great job!
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
                 <p className="text-4xl font-bold text-primary">{score}</p>
-                <p className="text-muted-foreground">You've mastered the relative clauses. Congratulations!</p>
+                <p className="text-muted-foreground">You've finished the game. Save your score to see how you rank!</p>
               <div className="flex gap-4">
                 <Button onClick={() => router.push('/')} variant="outline" className="w-full">
                   <Home className="mr-2 h-4 w-4"/> Main Menu
                 </Button>
-                <Button onClick={handleFinishGame} className="w-full">
+                <Button onClick={handleFinishGame} className="w-full" disabled={isSaving}>
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
                   Save & Exit
                 </Button>
               </div>

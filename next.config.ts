@@ -1,11 +1,6 @@
 import type {NextConfig} from 'next';
 
-const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
-
 const nextConfig: NextConfig = {
-  output: 'export',
-  basePath: isGithubActions ? '/Juego-Who-that-which' : '',
-  assetPrefix: isGithubActions ? '/Juego-Who-that-which/' : '',
   typescript: {
     ignoreBuildErrors: true,
   },

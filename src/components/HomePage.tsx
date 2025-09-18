@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   Card,
@@ -29,16 +28,38 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import type { PlayerScore, GameDifficulty, PlayerInfo } from '@/lib/types';
 import { RelatixLogo } from './icons';
 import { cn } from '@/lib/utils';
-import { Trophy } from 'lucide-react';
+import { Trophy, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 
 export default function HomePage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(PlaceHolderImages[0].imageUrl);
   const [difficulty, setDifficulty] = useState<GameDifficulty>('easy');
-  const [highScores] = useLocalStorage<PlayerScore[]>('relatix-highscores', []);
+  const [highScores, setHighScores] = useState<PlayerScore[]>([]);
+  const [loadingScores, setLoadingScores] = useState(true);
   const [, setPlayerInfo] = useLocalStorage<PlayerInfo | null>('relatix-player', null);
+
+  useEffect(() => {
+    const fetchHighScores = async () => {
+      setLoadingScores(true);
+      try {
+        const highScoresCollection = collection(db, 'highscores');
+        const q = query(highScoresCollection, orderBy('score', 'desc'), limit(5));
+        const querySnapshot = await getDocs(q);
+        const scores = querySnapshot.docs.map(doc => doc.data() as PlayerScore);
+        setHighScores(scores);
+      } catch (error) {
+        console.error("Error fetching high scores: ", error);
+      } finally {
+        setLoadingScores(false);
+      }
+    };
+
+    fetchHighScores();
+  }, []);
 
   const handleStartGame = () => {
     if (name.trim()) {
@@ -46,8 +67,6 @@ export default function HomePage() {
       router.push('/play');
     }
   };
-  
-  const sortedHighScores = [...highScores].sort((a, b) => b.score - a.score).slice(0, 5);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -160,7 +179,11 @@ export default function HomePage() {
                 <CardDescription>See who is at the top of the leaderboard.</CardDescription>
               </CardHeader>
               <CardContent>
-                {sortedHighScores.length > 0 ? (
+                {loadingScores ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : highScores.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -170,7 +193,7 @@ export default function HomePage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedHighScores.map((player, index) => (
+                      {highScores.map((player, index) => (
                         <TableRow key={`${player.name}-${player.date}`}>
                           <TableCell className="font-medium">{index + 1}</TableCell>
                           <TableCell>
