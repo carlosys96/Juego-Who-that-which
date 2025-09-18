@@ -43,7 +43,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
 import { useToast } from '@/hooks/use-toast';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, query, orderBy, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, addDoc, query, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
 
 
 const QUESTIONS_PER_LEVEL = 10;
@@ -151,6 +151,7 @@ export default function GameComponent() {
   }, [playerInfo?.name, router]);
   
   const handleFinishGame = async () => {
+    if (isSaving) return;
     setIsSaving(true);
     try {
       const date = new Date().toISOString();
@@ -162,12 +163,17 @@ export default function GameComponent() {
 
       // 2. Check and update the high scores leaderboard
       const highScoresCollection = collection(db, 'highscores');
-      const q = query(highScoresCollection, orderBy('score', 'asc'), limit(HIGH_SCORE_LIMIT));
+      const q = query(highScoresCollection, limit(HIGH_SCORE_LIMIT));
       const querySnapshot = await getDocs(q);
       const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as PlayerScore }));
 
-      const lowestHighScore = highScores.length > 0 ? highScores[0] : null;
-
+      let lowestHighScore: { id: string; score: number } | null = null;
+      if (highScores.length > 0) {
+        // Sort on the client to find the lowest score
+        highScores.sort((a, b) => a.score - b.score);
+        lowestHighScore = { id: highScores[0].id, score: highScores[0].score };
+      }
+      
       if (highScores.length < HIGH_SCORE_LIMIT || (lowestHighScore && score > lowestHighScore.score)) {
         const batch = writeBatch(db);
         
