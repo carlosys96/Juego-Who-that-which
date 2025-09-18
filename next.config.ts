@@ -1,6 +1,6 @@
 import type {NextConfig} from 'next';
 
-const repo = 'relatix';
+const repo = 'Juego-Who-that-which';
 const assetPrefix = `/${repo}/`;
 const basePath = `/${repo}`;
 
