@@ -164,6 +164,7 @@ export default function GameComponent() {
   const handleFinishGame = async () => {
     setIsSaving(true);
     const dateString = new Date().toISOString();
+    
     const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date: dateString };
     const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
@@ -173,35 +174,37 @@ export default function GameComponent() {
 
       // 2. Handle high score logic.
       const highScoresRef = collection(db, 'highscores');
-      const highScoresQuery = query(highScoresRef, orderBy('score', 'desc'), limit(HIGH_SCORE_LIMIT));
-      const querySnapshot = await getDocs(highScoresQuery);
+      const q = query(highScoresRef, orderBy('score', 'desc'), limit(HIGH_SCORE_LIMIT));
+      const querySnapshot = await getDocs(q);
       const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as PlayerScore }));
 
-      let shouldAddHighScore = false;
-      let toastMessage = "Your results are saved for the teacher panel. Good job!";
       let toastTitle = "Score Saved!";
+      let toastMessage = "Your results are saved for the teacher panel. Good job!";
+      let madeItToLeaderboard = false;
 
       if (highScores.length < HIGH_SCORE_LIMIT) {
-        shouldAddHighScore = true;
+        // Leaderboard is not full, add the new score.
+        await addDoc(highScoresRef, finalScore);
+        madeItToLeaderboard = true;
       } else {
+        // Leaderboard is full, check if the new score is higher than the lowest.
         const lowestHighScore = highScores[highScores.length - 1];
         if (score > lowestHighScore.score) {
-          shouldAddHighScore = true;
-          // We'll delete the lowest score to make room for the new one.
           const batch = writeBatch(db);
-          const newScoreRef = doc(collection(highScoresRef)); // new doc with random id
-          batch.set(newScoreRef, finalScore);
-          batch.delete(doc(db, 'highscores', lowestHighScore.id));
+          // Delete the lowest score
+          const lowestScoreDocRef = doc(db, 'highscores', lowestHighScore.id);
+          batch.delete(lowestScoreDocRef);
+          
+          // Add the new score
+          const newScoreDocRef = doc(collection(highScoresRef)); // new doc with random id
+          batch.set(newScoreDocRef, finalScore);
+          
           await batch.commit();
-          shouldAddHighScore = false; // We already handled it.
+          madeItToLeaderboard = true;
         }
       }
 
-      if (shouldAddHighScore) {
-        await addDoc(highScoresRef, finalScore);
-      }
-      
-      if(shouldAddHighScore || (highScores.length >= HIGH_SCORE_LIMIT && score > (highScores[highScores.length - 1]?.score || 0))) {
+      if(madeItToLeaderboard) {
         toastTitle = "New High Score!";
         toastMessage = "You made it to the global leaderboard!";
       }
@@ -211,7 +214,7 @@ export default function GameComponent() {
         description: toastMessage,
       });
 
-      // 3. If everything was successful, navigate home.
+      // 3. If everything was successful, THEN navigate home.
       router.push('/');
 
     } catch (error: any) {
@@ -222,7 +225,8 @@ export default function GameComponent() {
         variant: "destructive",
         duration: 9000,
       });
-    } finally {
+      // Important: Only set saving to false in case of error, to prevent double clicks.
+      // On success, we navigate away.
       setIsSaving(false);
     }
   };
