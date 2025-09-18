@@ -33,6 +33,8 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, limit, orderBy, query } from 'firebase/firestore';
 
+const HIGH_SCORE_LIMIT = 10;
+
 export default function HomePage() {
   const router = useRouter();
   const [name, setName] = useState('');
@@ -47,7 +49,7 @@ export default function HomePage() {
       setLoadingScores(true);
       try {
         const highScoresCollection = collection(db, 'highscores');
-        const q = query(highScoresCollection, orderBy('score', 'desc'), limit(5));
+        const q = query(highScoresCollection, orderBy('score', 'desc'), limit(HIGH_SCORE_LIMIT));
         const querySnapshot = await getDocs(q);
         const scores = querySnapshot.docs.map(doc => doc.data() as PlayerScore);
         setHighScores(scores);

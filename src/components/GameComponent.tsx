@@ -168,32 +168,30 @@ export default function GameComponent() {
     const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
     try {
-      // Save the full player session for the admin panel first
+      // 1. Always save the player's full session data for the admin panel.
       await addDoc(collection(db, 'sessions'), sessionData);
-      
-      // Handle high score logic
-      const highScoresCollection = collection(db, 'highscores');
-      const q = query(highScoresCollection, orderBy('score', 'desc'));
-      const querySnapshot = await getDocs(q);
+
+      // 2. Handle high score logic.
+      const highScoresRef = collection(db, 'highscores');
+      const highScoresQuery = query(highScoresRef, orderBy('score', 'desc'), limit(HIGH_SCORE_LIMIT));
+      const querySnapshot = await getDocs(highScoresQuery);
       const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as PlayerScore }));
 
       let shouldAddHighScore = false;
-      
+
       if (highScores.length < HIGH_SCORE_LIMIT) {
-        // If the leaderboard is not full, always add the score
         shouldAddHighScore = true;
       } else {
-        // If the leaderboard is full, check if the new score is higher than the lowest score
         const lowestHighScore = highScores[highScores.length - 1];
         if (score > lowestHighScore.score) {
           shouldAddHighScore = true;
-          // Delete the lowest score to make room
+          // Delete the lowest score to make room for the new one.
           await deleteDoc(doc(db, 'highscores', lowestHighScore.id));
         }
       }
 
       if (shouldAddHighScore) {
-        await addDoc(highScoresCollection, finalScore);
+        await addDoc(highScoresRef, finalScore);
         toast({
           title: "New High Score!",
           description: "Your results have been saved to the global leaderboard.",
@@ -201,20 +199,23 @@ export default function GameComponent() {
       } else {
         toast({
           title: "Score Saved!",
-          description: "Your results are saved for the teacher panel. Keep playing to get a high score!",
+          description: "Your results are saved for the teacher panel. Good job!",
         });
       }
+      
+      // 3. If everything was successful, navigate home.
+      router.push('/');
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving score: ", error);
       toast({
         title: "Error Saving Score",
-        description: "Could not save your score. Please check the browser console for details.",
+        description: `Could not save your score. Details: ${error.message}`,
         variant: "destructive",
+        duration: 9000,
       });
     } finally {
       setIsSaving(false);
-      router.push('/');
     }
   };
 
@@ -390,8 +391,8 @@ export default function GameComponent() {
                   <Home className="mr-2 h-4 w-4"/> Main Menu
                 </Button>
                 <Button onClick={handleFinishGame} className="w-full" disabled={isSaving}>
-                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                  Save & Exit
+                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Award className="mr-2 h-4 w-4" />}
+                  Save Score
                 </Button>
               </div>
             </CardContent>
@@ -432,7 +433,3 @@ export default function GameComponent() {
     </div>
   );
 }
-
-    
-
-    
