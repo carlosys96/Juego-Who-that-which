@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, limit, doc, deleteDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const QUESTIONS_PER_LEVEL = 10;
@@ -163,7 +163,8 @@ export default function GameComponent() {
   
   const handleFinishGame = async () => {
     setIsSaving(true);
-    const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date: new Date().toISOString() };
+    const dateString = new Date().toISOString();
+    const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date: dateString };
     const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
     try {
@@ -172,22 +173,19 @@ export default function GameComponent() {
       
       // Handle high score logic
       const highScoresCollection = collection(db, 'highscores');
-      const q = query(highScoresCollection, orderBy('score', 'asc'), limit(1)); // Get the lowest score
+      const q = query(highScoresCollection, orderBy('score', 'asc'), limit(HIGH_SCORE_LIMIT));
       const querySnapshot = await getDocs(q);
+      const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      const scoresDocs = await getDocs(query(highScoresCollection));
-      const numberOfHighScores = scoresDocs.size;
-
       let shouldAddHighScore = false;
-      if (numberOfHighScores < HIGH_SCORE_LIMIT) {
+      if (highScores.length < HIGH_SCORE_LIMIT) {
         shouldAddHighScore = true;
-      } else if (!querySnapshot.empty) {
-        const lowestHighScore = querySnapshot.docs[0].data().score;
-        if (score > lowestHighScore) {
+      } else {
+        const lowestHighScore = highScores[0];
+        if (score > lowestHighScore.score) {
           shouldAddHighScore = true;
-          // Optional: remove the lowest score to keep the list at a fixed size
-          // const lowestScoreDocId = querySnapshot.docs[0].id;
-          // await deleteDoc(doc(db, 'highscores', lowestScoreDocId));
+          // remove the lowest score to keep the list at a fixed size
+          await deleteDoc(doc(db, 'highscores', lowestHighScore.id));
         }
       }
 
@@ -207,8 +205,8 @@ export default function GameComponent() {
     } catch (error) {
       console.error("Error saving score: ", error);
       toast({
-        title: "Error",
-        description: "Could not save your score. Please try again.",
+        title: "Error Saving Score",
+        description: "Could not save your score. Please check the console for details.",
         variant: "destructive",
       });
     } finally {
@@ -431,3 +429,5 @@ export default function GameComponent() {
     </div>
   );
 }
+
+    
