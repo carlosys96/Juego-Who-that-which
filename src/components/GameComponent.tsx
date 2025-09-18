@@ -42,7 +42,7 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit, doc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, limit, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const QUESTIONS_PER_LEVEL = 10;
@@ -168,23 +168,26 @@ export default function GameComponent() {
     const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
     try {
-      // Save the full player session for the admin panel
+      // Save the full player session for the admin panel first
       await addDoc(collection(db, 'sessions'), sessionData);
       
       // Handle high score logic
       const highScoresCollection = collection(db, 'highscores');
-      const q = query(highScoresCollection, orderBy('score', 'asc'), limit(HIGH_SCORE_LIMIT));
+      const q = query(highScoresCollection, orderBy('score', 'desc'));
       const querySnapshot = await getDocs(q);
-      const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+      const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as PlayerScore }));
+
       let shouldAddHighScore = false;
+      
       if (highScores.length < HIGH_SCORE_LIMIT) {
+        // If the leaderboard is not full, always add the score
         shouldAddHighScore = true;
       } else {
-        const lowestHighScore = highScores[0];
+        // If the leaderboard is full, check if the new score is higher than the lowest score
+        const lowestHighScore = highScores[highScores.length - 1];
         if (score > lowestHighScore.score) {
           shouldAddHighScore = true;
-          // remove the lowest score to keep the list at a fixed size
+          // Delete the lowest score to make room
           await deleteDoc(doc(db, 'highscores', lowestHighScore.id));
         }
       }
@@ -198,7 +201,7 @@ export default function GameComponent() {
       } else {
         toast({
           title: "Score Saved!",
-          description: "Your results are saved. Keep playing to get a high score!",
+          description: "Your results are saved for the teacher panel. Keep playing to get a high score!",
         });
       }
 
@@ -206,7 +209,7 @@ export default function GameComponent() {
       console.error("Error saving score: ", error);
       toast({
         title: "Error Saving Score",
-        description: "Could not save your score. Please check the console for details.",
+        description: "Could not save your score. Please check the browser console for details.",
         variant: "destructive",
       });
     } finally {
@@ -429,5 +432,7 @@ export default function GameComponent() {
     </div>
   );
 }
+
+    
 
     
