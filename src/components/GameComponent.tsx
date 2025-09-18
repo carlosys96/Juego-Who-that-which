@@ -25,7 +25,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { questions as allQuestions } from '@/lib/questions';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds';
-import { adaptQuestionsToUserPerformance } from '@/ai/flows/adapt-questions-to-user-performance.flow';
 import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerInfo, GameDifficulty, PlayerSession } from '@/lib/types';
 import {
   Award,
@@ -60,7 +59,7 @@ export default function GameComponent() {
   const [userPerformance, setUserPerformance] = useState<PlayerPerformance[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [isMusicOn, setIsMusicOn] = useState(false);
-  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [timer, setTimer] = useState(TIMED_QUESTION_DURATION);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
@@ -143,34 +142,16 @@ export default function GameComponent() {
 
   const startLevel = useCallback(async () => {
     setGameState('idle');
-    setIsAiLoading(true);
+    setIsLoading(true);
 
     const questionsForDifficulty = allQuestions.filter(q => q.difficulty === playerInfo.difficulty);
-    
-    const performanceDataForAI = userPerformance.map(p => ({
-      questionId: p.questionId,
-      correct: p.correct,
-    }));
-    
-    try {
-      const problematicQuestionIds = await adaptQuestionsToUserPerformance({
-        userPerformanceData: performanceDataForAI,
-      });
-      const problematicQuestions = allQuestions.filter(q => problematicQuestionIds.includes(q.id));
-      
-      const combinedQuestions = [...questionsForDifficulty, ...problematicQuestions];
-      const shuffledQuestions = [...combinedQuestions].sort(() => 0.5 - Math.random());
-      setQuestionQueue(shuffledQuestions.slice(0, QUESTIONS_PER_LEVEL));
-    } catch(e) {
-      console.error("AI flow failed, falling back to default questions.", e);
-      const shuffledQuestions = [...questionsForDifficulty].sort(() => 0.5 - Math.random());
-      setQuestionQueue(shuffledQuestions.slice(0, QUESTIONS_PER_LEVEL));
-    }
+    const shuffledQuestions = [...questionsForDifficulty].sort(() => 0.5 - Math.random());
+    setQuestionQueue(shuffledQuestions.slice(0, QUESTIONS_PER_LEVEL));
     
     setQuestionIndex(0);
-    setIsAiLoading(false);
+    setIsLoading(false);
     setGameState('playing');
-  }, [userPerformance, playerInfo.difficulty]);
+  }, [playerInfo.difficulty]);
   
   useEffect(() => {
     if (!playerInfo?.name) {
@@ -261,12 +242,11 @@ export default function GameComponent() {
   };
 
   const renderContent = () => {
-    if (isAiLoading) {
+    if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center text-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <h2 className="text-2xl font-headline">Preparing Your Questions...</h2>
-          <p className="text-muted-foreground">Our AI is adapting the game to your performance!</p>
         </div>
       );
     }
