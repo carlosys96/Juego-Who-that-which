@@ -1,16 +1,24 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read access to highscores for the leaderboard
+    
+    // Allow anyone to read the high scores leaderboard
     match /highscores/{scoreId} {
       allow read: if true;
-      allow write: if false; // Protect highscores from being written directly
+      allow create: if true; // Allow new scores to be added
+      allow update, delete: if false; // Prevent tampering
     }
 
-    // Allow users to write their own session data
-    // A more secure rule would involve user authentication
+    // Allow anyone to write their own session data
     match /sessions/{sessionId} {
-      allow read, write: if true; // In a real app, you'd restrict this
+      allow read: if true; // Teacher panel needs to read this
+      allow create: if true;
+      allow update, delete: if false; // Prevent tampering
+    }
+
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
