@@ -152,11 +152,11 @@ export default function GameComponent() {
   
   const handleFinishGame = async () => {
     setIsSaving(true);
-    const date = new Date().toISOString();
-    const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date };
-    const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
-
     try {
+      const date = new Date().toISOString();
+      const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date };
+      const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
+
       // 1. Save the detailed player session for the teacher panel
       await addDoc(collection(db, 'sessions'), sessionData);
 
@@ -168,15 +168,12 @@ export default function GameComponent() {
 
       const lowestHighScore = highScores.length > 0 ? highScores[0] : null;
 
-      // Add to high scores if the board is not full OR the new score is higher than the lowest score on the board
       if (highScores.length < HIGH_SCORE_LIMIT || (lowestHighScore && score > lowestHighScore.score)) {
         const batch = writeBatch(db);
         
-        // Add the new score
         const newHighScoreRef = doc(collection(db, 'highscores'));
         batch.set(newHighScoreRef, finalScore);
         
-        // If the board is now over the limit, remove the lowest score
         if (highScores.length >= HIGH_SCORE_LIMIT && lowestHighScore) {
           const lowestScoreDocRef = doc(db, 'highscores', lowestHighScore.id);
           batch.delete(lowestScoreDocRef);
@@ -203,7 +200,6 @@ export default function GameComponent() {
       });
     } finally {
       setIsSaving(false);
-      // Navigate home ONLY after all async operations are done
       router.push('/');
     }
   };
