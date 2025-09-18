@@ -25,6 +25,8 @@ export interface PlayerInfo {
     difficulty: GameDifficulty;
 }
 
+// PlayerPerformance and PlayerSession are no longer needed for local storage implementation
+// but are kept for potential future re-integration with a cloud database.
 export interface PlayerPerformance {
   questionId: string;
   correct: boolean;

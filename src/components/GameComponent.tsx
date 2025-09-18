@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { questions as allQuestions } from '@/lib/questions';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds';
-import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerInfo, GameDifficulty, PlayerSession } from '@/lib/types';
+import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerInfo, GameDifficulty } from '@/lib/types';
 import {
   Award,
   CheckCircle2,
@@ -41,8 +41,6 @@ import {
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, query, orderBy, limit, doc, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const QUESTIONS_PER_LEVEL = 10;
@@ -53,13 +51,12 @@ export default function GameComponent() {
   const router = useRouter();
   const { toast } = useToast();
   const [playerInfo] = useLocalStorage<PlayerInfo>('relatix-player', { name: 'Player', avatar: '', difficulty: 'easy' });
+  const [highScores, setHighScores] = useLocalStorage<PlayerScore[]>('relatix-highscores', []);
 
   const [gameState, setGameState] = useState<GameState>('idle');
-  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [questionQueue, setQuestionQueue] = useState<AppQuestion[]>([]);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [userPerformance, setUserPerformance] = useState<PlayerPerformance[]>([]);
   const [feedback, setFeedback] = useState<'correct' | 'incorrect' | null>(null);
   const [isMusicOn, setIsMusicOn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,16 +64,6 @@ export default function GameComponent() {
   const [timer, setTimer] = useState(TIMED_QUESTION_DURATION);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
-
-  const gameLevels = useMemo(() => {
-    const difficultyMap: Record<GameDifficulty, (1 | 2 | 3)[]> = {
-      easy: allQuestions.filter(q => q.difficulty === 'easy').map(q => q.level),
-      medium: allQuestions.filter(q => q.difficulty === 'medium').map(q => q.level),
-      hard: allQuestions.filter(q => q.difficulty === 'hard').map(q => q.level),
-    };
-    const levels = difficultyMap[playerInfo.difficulty] || [1];
-    return [...new Set(levels)].sort() as (1|2|3)[];
-  }, [playerInfo.difficulty]);
   
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
 
@@ -114,9 +101,6 @@ export default function GameComponent() {
     } else {
       playIncorrectSound();
     }
-
-    setUserPerformance(prev => [...prev, { questionId: currentQuestion.id, correct: isCorrect, chosenAnswer: answer }]);
-
   }, [currentQuestion, feedback, playerInfo.difficulty]);
   
   useEffect(() => {
@@ -147,7 +131,6 @@ export default function GameComponent() {
     
     setQuestionIndex(0);
     setScore(0);
-    setUserPerformance([]);
     setIsLoading(false);
     setGameState('playing');
   }, [playerInfo.difficulty]);
@@ -161,74 +144,24 @@ export default function GameComponent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerInfo?.name, router]);
   
-  const handleFinishGame = async () => {
+  const handleFinishGame = () => {
     setIsSaving(true);
     const dateString = new Date().toISOString();
-    
     const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date: dateString };
-    const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
-    try {
-      // 1. Always save the player's full session data for the admin panel.
-      await addDoc(collection(db, 'sessions'), sessionData);
+    const newHighScores = [...highScores, finalScore]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, HIGH_SCORE_LIMIT);
 
-      // 2. Handle high score logic.
-      const highScoresRef = collection(db, 'highscores');
-      const q = query(highScoresRef, orderBy('score', 'desc'), limit(HIGH_SCORE_LIMIT));
-      const querySnapshot = await getDocs(q);
-      const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as PlayerScore }));
+    setHighScores(newHighScores);
 
-      let toastTitle = "Score Saved!";
-      let toastMessage = "Your results are saved for the teacher panel. Good job!";
-      let madeItToLeaderboard = false;
+    toast({
+      title: "Score Saved!",
+      description: "Your score has been saved to your local leaderboard.",
+    });
 
-      if (highScores.length < HIGH_SCORE_LIMIT) {
-        // Leaderboard is not full, add the new score.
-        await addDoc(highScoresRef, finalScore);
-        madeItToLeaderboard = true;
-      } else {
-        // Leaderboard is full, check if the new score is higher than the lowest.
-        const lowestHighScore = highScores[highScores.length - 1];
-        if (score > lowestHighScore.score) {
-          const batch = writeBatch(db);
-          // Delete the lowest score
-          const lowestScoreDocRef = doc(db, 'highscores', lowestHighScore.id);
-          batch.delete(lowestScoreDocRef);
-          
-          // Add the new score
-          const newScoreDocRef = doc(collection(highScoresRef)); // new doc with random id
-          batch.set(newScoreDocRef, finalScore);
-          
-          await batch.commit();
-          madeItToLeaderboard = true;
-        }
-      }
-
-      if(madeItToLeaderboard) {
-        toastTitle = "New High Score!";
-        toastMessage = "You made it to the global leaderboard!";
-      }
-
-      toast({
-        title: toastTitle,
-        description: toastMessage,
-      });
-
-      // 3. If everything was successful, THEN navigate home.
-      router.push('/');
-
-    } catch (error: any) {
-      console.error("Error saving score: ", error);
-      toast({
-        title: "Error Saving Score",
-        description: `Could not save your score. Details: ${error.message}`,
-        variant: "destructive",
-        duration: 9000,
-      });
-      // Important: Only set saving to false in case of error, to prevent double clicks.
-      // On success, we navigate away.
-      setIsSaving(false);
-    }
+    setIsSaving(false);
+    router.push('/');
   };
 
   const toggleMusicHandler = () => {
@@ -397,7 +330,7 @@ export default function GameComponent() {
             </CardHeader>
             <CardContent className="space-y-6">
                 <p className="text-4xl font-bold text-primary">{score}</p>
-                <p className="text-muted-foreground">You've finished the game. Save your score to see how you rank!</p>
+                <p className="text-muted-foreground">You've finished the game. Save your score to the local leaderboard!</p>
               <div className="flex gap-4">
                 <Button onClick={() => router.push('/')} variant="outline" className="w-full">
                   <Home className="mr-2 h-4 w-4"/> Main Menu
