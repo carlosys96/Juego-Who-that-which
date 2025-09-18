@@ -47,6 +47,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const QUESTIONS_PER_LEVEL = 10;
 const TIMED_QUESTION_DURATION = 30; // seconds for hard questions
+const HIGH_SCORE_LIMIT = 10;
 
 export default function GameComponent() {
   const router = useRouter();
@@ -166,28 +167,42 @@ export default function GameComponent() {
     const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
     try {
+      // Save the full player session for the admin panel
       await addDoc(collection(db, 'sessions'), sessionData);
       
+      // Handle high score logic
       const highScoresCollection = collection(db, 'highscores');
-      const q = query(highScoresCollection, orderBy('score', 'desc'), limit(1));
+      const q = query(highScoresCollection, orderBy('score', 'asc'), limit(1)); // Get the lowest score
       const querySnapshot = await getDocs(q);
       
-      let isNewHighScore = true;
-      if (!querySnapshot.empty) {
+      const scoresDocs = await getDocs(query(highScoresCollection));
+      const numberOfHighScores = scoresDocs.size;
+
+      let shouldAddHighScore = false;
+      if (numberOfHighScores < HIGH_SCORE_LIMIT) {
+        shouldAddHighScore = true;
+      } else if (!querySnapshot.empty) {
         const lowestHighScore = querySnapshot.docs[0].data().score;
-        if (score > lowestHighScore || querySnapshot.size < 10) {
-           await addDoc(highScoresCollection, finalScore);
-        } else {
-          isNewHighScore = false;
+        if (score > lowestHighScore) {
+          shouldAddHighScore = true;
+          // Optional: remove the lowest score to keep the list at a fixed size
+          // const lowestScoreDocId = querySnapshot.docs[0].id;
+          // await deleteDoc(doc(db, 'highscores', lowestScoreDocId));
         }
-      } else {
-        await addDoc(highScoresCollection, finalScore);
       }
 
-      toast({
-        title: "Score Saved!",
-        description: "Your results have been saved to the global leaderboard.",
-      });
+      if (shouldAddHighScore) {
+        await addDoc(highScoresCollection, finalScore);
+        toast({
+          title: "New High Score!",
+          description: "Your results have been saved to the global leaderboard.",
+        });
+      } else {
+        toast({
+          title: "Score Saved!",
+          description: "Your results are saved. Keep playing to get a high score!",
+        });
+      }
 
     } catch (error) {
       console.error("Error saving score: ", error);

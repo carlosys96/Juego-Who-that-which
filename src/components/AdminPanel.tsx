@@ -67,7 +67,7 @@ export default function AdminPanel() {
             session.name,
             session.avatar,
             session.score,
-            session.date,
+            new Date(session.date).toISOString().split('T')[0],
             perf.questionId,
             `"${questionText.replace(/"/g, '""')}"`,
             perf.correct,
@@ -76,7 +76,7 @@ export default function AdminPanel() {
           csvContent += row + '\n';
         });
       } else {
-        const row = [session.name, session.avatar, session.score, session.date, '', '', '', ''].join(',');
+        const row = [session.name, session.avatar, session.score, new Date(session.date).toISOString().split('T')[0], '', '', '', ''].join(',');
         csvContent += row + '\n';
       }
     });
