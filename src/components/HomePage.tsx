@@ -28,17 +28,39 @@ import useLocalStorage from '@/hooks/use-local-storage';
 import type { PlayerScore, GameDifficulty, PlayerInfo } from '@/lib/types';
 import { RelatixLogo } from './icons';
 import { cn } from '@/lib/utils';
-import { Trophy } from 'lucide-react';
+import { Trophy, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { db } from '@/lib/firebase';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 export default function HomePage() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(PlaceHolderImages[0].imageUrl);
   const [difficulty, setDifficulty] = useState<GameDifficulty>('easy');
-  const [highScores] = useLocalStorage<PlayerScore[]>('relatix-highscores', []);
+  const [highScores, setHighScores] = useState<PlayerScore[]>([]);
+  const [loadingScores, setLoadingScores] = useState(true);
   const [, setPlayerInfo] = useLocalStorage<PlayerInfo | null>('relatix-player', null);
 
+  useEffect(() => {
+    const fetchHighScores = async () => {
+      setLoadingScores(true);
+      try {
+        const highScoresCollection = collection(db, 'highscores');
+        const q = query(highScoresCollection, orderBy('score', 'desc'), limit(10));
+        const querySnapshot = await getDocs(q);
+        const scores = querySnapshot.docs.map(doc => doc.data() as PlayerScore);
+        setHighScores(scores);
+      } catch (error) {
+        console.error("Error fetching high scores: ", error);
+        // Optionally, show a toast to the user
+      } finally {
+        setLoadingScores(false);
+      }
+    };
+
+    fetchHighScores();
+  }, []);
 
   const handleStartGame = () => {
     if (name.trim()) {
@@ -155,10 +177,14 @@ export default function HomePage() {
                 <CardTitle className="flex items-center gap-2">
                   <Trophy className="text-primary" /> High Scores
                 </CardTitle>
-                <CardDescription>Your personal high scores on this device.</CardDescription>
+                <CardDescription>Top 10 players on the global leaderboard.</CardDescription>
               </CardHeader>
               <CardContent>
-                {highScores.length > 0 ? (
+                {loadingScores ? (
+                   <div className="flex justify-center items-center py-8">
+                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                   </div>
+                ) : highScores.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>

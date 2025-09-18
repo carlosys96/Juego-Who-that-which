@@ -25,7 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { questions as allQuestions } from '@/lib/questions';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { playCorrectSound, playIncorrectSound, toggleMusic } from '@/lib/sounds';
-import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerInfo, GameDifficulty } from '@/lib/types';
+import type { AppQuestion, GameState, PlayerPerformance, PlayerScore, PlayerInfo, GameDifficulty, PlayerSession } from '@/lib/types';
 import {
   Award,
   CheckCircle2,
@@ -42,6 +42,9 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { RelatixLogo } from './icons';
 import { useToast } from '@/hooks/use-toast';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, query, orderBy, limit, getDocs, writeBatch, doc } from 'firebase/firestore';
+
 
 const QUESTIONS_PER_LEVEL = 10;
 const TIMED_QUESTION_DURATION = 30; // seconds for hard questions
@@ -51,8 +54,7 @@ export default function GameComponent() {
   const router = useRouter();
   const { toast } = useToast();
   const [playerInfo] = useLocalStorage<PlayerInfo>('relatix-player', { name: 'Player', avatar: '', difficulty: 'easy' });
-  const [highScores, setHighScores] = useLocalStorage<PlayerScore[]>('relatix-highscores', []);
-
+  
   const [gameState, setGameState] = useState<GameState>('idle');
   const [score, setScore] = useState(0);
   const [questionQueue, setQuestionQueue] = useState<AppQuestion[]>([]);
@@ -64,6 +66,7 @@ export default function GameComponent() {
   const [timer, setTimer] = useState(TIMED_QUESTION_DURATION);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const [userPerformance, setUserPerformance] = useState<PlayerPerformance[]>([]);
   
   const currentQuestion = useMemo(() => questionQueue[questionIndex], [questionQueue, questionIndex]);
 
@@ -93,6 +96,8 @@ export default function GameComponent() {
         const processedAnswer = answer.trim().toLowerCase();
         isCorrect = processedAnswer === currentQuestion.correctAnswer.toLowerCase();
     }
+
+    setUserPerformance(prev => [...prev, { questionId: currentQuestion.id, correct: isCorrect, chosenAnswer: answer }]);
     
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     if (isCorrect) {
@@ -124,6 +129,7 @@ export default function GameComponent() {
   const startGame = useCallback(async () => {
     setGameState('idle');
     setIsLoading(true);
+    setUserPerformance([]);
 
     const questionsForDifficulty = allQuestions.filter(q => q.difficulty === playerInfo.difficulty);
     const shuffledQuestions = [...questionsForDifficulty].sort(() => 0.5 - Math.random());
@@ -144,25 +150,64 @@ export default function GameComponent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playerInfo?.name, router]);
   
-  const handleFinishGame = () => {
+  const handleFinishGame = async () => {
     setIsSaving(true);
-    const dateString = new Date().toISOString();
-    const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date: dateString };
+    const date = new Date().toISOString();
+    const finalScore: PlayerScore = { name: playerInfo.name, avatar: playerInfo.avatar, score, date };
+    const sessionData: PlayerSession = { ...finalScore, performance: userPerformance };
 
-    const newHighScores = [...highScores, finalScore]
-      .sort((a, b) => b.score - a.score)
-      .slice(0, HIGH_SCORE_LIMIT);
+    try {
+      // 1. Save the detailed player session for the teacher panel
+      await addDoc(collection(db, 'sessions'), sessionData);
 
-    setHighScores(newHighScores);
+      // 2. Check and update the high scores leaderboard
+      const highScoresCollection = collection(db, 'highscores');
+      const q = query(highScoresCollection, orderBy('score', 'asc'), limit(HIGH_SCORE_LIMIT));
+      const querySnapshot = await getDocs(q);
+      const highScores = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as PlayerScore }));
 
-    toast({
-      title: "Score Saved!",
-      description: "Your score has been saved to your local leaderboard.",
-    });
+      const lowestHighScore = highScores.length > 0 ? highScores[0] : null;
 
-    setIsSaving(false);
-    router.push('/');
+      // Add to high scores if the board is not full OR the new score is higher than the lowest score on the board
+      if (highScores.length < HIGH_SCORE_LIMIT || (lowestHighScore && score > lowestHighScore.score)) {
+        const batch = writeBatch(db);
+        
+        // Add the new score
+        const newHighScoreRef = doc(collection(db, 'highscores'));
+        batch.set(newHighScoreRef, finalScore);
+        
+        // If the board is now over the limit, remove the lowest score
+        if (highScores.length >= HIGH_SCORE_LIMIT && lowestHighScore) {
+          const lowestScoreDocRef = doc(db, 'highscores', lowestHighScore.id);
+          batch.delete(lowestScoreDocRef);
+        }
+        
+        await batch.commit();
+
+        toast({
+          title: "New High Score!",
+          description: "You've made it to the global leaderboard!",
+        });
+      } else {
+         toast({
+          title: "Score Saved!",
+          description: "Your session data has been saved.",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving score:", error);
+      toast({
+        title: "Oh no! Something went wrong.",
+        description: "There was a problem saving your score. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+      // Navigate home ONLY after all async operations are done
+      router.push('/');
+    }
   };
+
 
   const toggleMusicHandler = () => {
     const newMusicState = !isMusicOn;
@@ -330,14 +375,14 @@ export default function GameComponent() {
             </CardHeader>
             <CardContent className="space-y-6">
                 <p className="text-4xl font-bold text-primary">{score}</p>
-                <p className="text-muted-foreground">You've finished the game. Save your score to the local leaderboard!</p>
+                <p className="text-muted-foreground">You've finished the game. Save your score to the global leaderboard!</p>
               <div className="flex gap-4">
                 <Button onClick={() => router.push('/')} variant="outline" className="w-full">
                   <Home className="mr-2 h-4 w-4"/> Main Menu
                 </Button>
                 <Button onClick={handleFinishGame} className="w-full" disabled={isSaving}>
                   {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Award className="mr-2 h-4 w-4" />}
-                  Save Score
+                  Save Score & Exit
                 </Button>
               </div>
             </CardContent>
