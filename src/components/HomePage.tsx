@@ -31,7 +31,7 @@ import { cn } from '@/lib/utils';
 import { Trophy, Loader2 } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { db } from '@/lib/firebase';
-import { collection, query, limit, getDocs } from 'firebase/firestore';
+import { collection, query, limit, getDocs, orderBy } from 'firebase/firestore';
 
 export default function HomePage() {
   const router = useRouter();
@@ -47,18 +47,12 @@ export default function HomePage() {
       setLoadingScores(true);
       try {
         const highScoresCollection = collection(db, 'highscores');
-        // Remove orderBy from the query to avoid needing a composite index
-        const q = query(highScoresCollection, limit(10));
+        const q = query(highScoresCollection, orderBy('score', 'desc'), limit(10));
         const querySnapshot = await getDocs(q);
         const scores = querySnapshot.docs.map(doc => doc.data() as PlayerScore);
-        
-        // Sort the scores on the client side
-        scores.sort((a, b) => b.score - a.score);
-
         setHighScores(scores);
       } catch (error) {
         console.error("Error fetching high scores: ", error);
-        // Optionally, show a toast to the user
       } finally {
         setLoadingScores(false);
       }

@@ -14,7 +14,7 @@ import { Download, Lock, LogIn, Info, CheckCircle, XCircle, Loader2 } from 'luci
 import { RelatixLogo } from './icons';
 import { PlayerSession } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
 
 const ADMIN_PASSWORD = '270219';
