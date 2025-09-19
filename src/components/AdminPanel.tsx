@@ -16,6 +16,7 @@ import { PlayerSession } from '@/lib/types';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { format } from 'date-fns';
+import { questions } from '@/lib/questions';
 
 const ADMIN_PASSWORD = '270219';
 
@@ -156,14 +157,23 @@ export default function AdminPanel() {
                             </div>
                         </AccordionTrigger>
                         <AccordionContent>
-                           <ul className="space-y-2 pl-4 pt-2">
-                            {session.performance.map(p => (
-                                <li key={p.questionId} className="flex items-center gap-2 text-sm">
-                                    {p.correct ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-red-500" />}
-                                    <span>Question ID: {p.questionId}</span>
-                                    <span className="text-muted-foreground truncate">Answer: "{p.chosenAnswer}"</span>
+                           <ul className="space-y-4 pl-4 pt-2">
+                            {session.performance.map(p => {
+                                const question = questions.find(q => q.id === p.questionId);
+                                if (!question) return null;
+
+                                return (
+                                <li key={p.questionId} className="flex items-start gap-3 text-sm p-3 bg-muted/50 rounded-md">
+                                    {p.correct ? <CheckCircle className="h-4 w-4 text-green-500 mt-1 shrink-0" /> : <XCircle className="h-4 w-4 text-red-500 mt-1 shrink-0" />}
+                                    <div className="flex-1">
+                                        <p className="font-semibold mb-2">{question.text}</p>
+                                        <p>Tu respuesta: <span className="font-mono p-1 bg-background rounded text-foreground">"{p.chosenAnswer}"</span></p>
+                                        {!p.correct && (
+                                            <p className="text-green-600 dark:text-green-400">Correcta: <span className="font-mono p-1 bg-green-500/10 rounded">"{question.correctAnswer}"</span></p>
+                                        )}
+                                    </div>
                                 </li>
-                            ))}
+                            )})}
                            </ul>
                         </AccordionContent>
                     </AccordionItem>
