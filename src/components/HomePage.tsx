@@ -47,9 +47,11 @@ export default function HomePage() {
       setLoadingScores(true);
       try {
         const highScoresCollection = collection(db, 'highscores');
-        const q = query(highScoresCollection, orderBy('score', 'desc'), limit(10));
+        const q = query(highScoresCollection, limit(10));
         const querySnapshot = await getDocs(q);
         const scores = querySnapshot.docs.map(doc => doc.data() as PlayerScore);
+        // Sort on the client to avoid needing a composite index in Firestore
+        scores.sort((a, b) => b.score - a.score);
         setHighScores(scores);
       } catch (error) {
         console.error("Error fetching high scores: ", error);
